@@ -707,7 +707,7 @@ const SEED_CARDS = [
     page: "study",          // study | library | metrics
     session: null,          // { queue:[ids], idx, flipped, results:{known,unsure,unknown} }
     setup: { scope: "all", countMode: "all", count: 20, startSide: "word" },
-    lib: { search: "", showAdd: false, expanded: null, editing: null }
+    lib: { search: "", showAdd: false, expanded: null, editing: null, refocusSearchPos: null }
   };
 
   function cardsByScope(scope){
@@ -1040,7 +1040,14 @@ const SEED_CARDS = [
     }
 
     const searchInput = document.getElementById("lib-search");
+    if(state.lib.refocusSearchPos !== null){
+      const pos = Math.min(state.lib.refocusSearchPos, searchInput.value.length);
+      searchInput.focus();
+      searchInput.setSelectionRange(pos, pos);
+      state.lib.refocusSearchPos = null;
+    }
     function runSearch(){
+      state.lib.refocusSearchPos = searchInput.selectionStart;
       state.lib.search = searchInput.value;
       renderLibrary();
     }
