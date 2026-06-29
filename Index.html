@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lexicon — Vocabulary Study</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: #e9e2cf;
+    --paper-deep: #ded4b8;
+    --card: #f7f2e3;
+    --ink: #2a241c;
+    --ink-soft: #5b5345;
+    --library: #1f3d2e;
+    --library-deep: #163024;
+    --brass: #ab8530;
+    --brass-light: #d3ad53;
+    --rust: #8a3b34;
+    --rule: rgba(42,36,28,0.16);
+    --rule-strong: rgba(42,36,28,0.28);
+    --known: #1f3d2e;
+    --unsure: #ab8530;
+    --unknown: #8a3b34;
+    --radius: 3px;
+    --shadow: 0 1px 0 rgba(42,36,28,0.08), 0 8px 24px -12px rgba(42,36,28,0.35);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background: var(--paper);
+    background-image:
+      radial-gradient(rgba(42,36,28,0.035) 1px, transparent 1px);
+    background-size: 3px 3px;
+    color: var(--ink);
+    font-family: 'Source Serif 4', Georgia, serif;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1,h2,h3,.display{ font-family: 'Fraunces', Georgia, serif; }
+  .mono{ font-family: 'JetBrains Mono', monospace; letter-spacing: 0.02em; }
+  button{ font-family: inherit; cursor:pointer; }
+  input[type="number"], input[type="text"], textarea, select{
+    font-family: 'Source Serif 4', Georgia, serif;
+  }
+  :focus-visible{ outline: 2px solid var(--brass); outline-offset: 2px; }
+
+  /* ---------- Shell ---------- */
+  .shell{ max-width: 760px; margin: 0 auto; padding: 0 16px 64px; }
+  .masthead{
+    padding: 28px 4px 14px;
+    text-align: center;
+  }
+  .masthead .display{
+    font-size: clamp(2rem, 6vw, 2.6rem);
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: var(--library-deep);
+    margin: 0;
+  }
+  .masthead .sub{
+    margin: 4px 0 0;
+    font-size: 0.8rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  /* ---------- Drawer tab nav ---------- */
+  .drawer-tabs{
+    position: sticky; top: 0; z-index: 50;
+    display: flex; gap: 0;
+    background: var(--paper);
+    padding-top: 6px;
+    border-bottom: 1px solid var(--rule-strong);
+  }
+  .drawer-tab{
+    flex: 1;
+    background: var(--paper-deep);
+    border: 1px solid var(--rule-strong);
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    padding: 11px 6px 13px;
+    margin: 0 3px;
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    transform: translateY(4px);
+    transition: transform .15s ease, background .15s ease, color .15s ease;
+    position: relative;
+  }
+  .drawer-tab .pull{
+    display:block; width: 20px; height: 4px; border-radius: 2px;
+    background: var(--rule-strong); margin: 0 auto 6px;
+  }
+  .drawer-tab.active{
+    background: var(--card);
+    color: var(--library-deep);
+    transform: translateY(0);
+    font-weight: 600;
+    box-shadow: 0 -2px 10px -4px rgba(0,0,0,0.15);
+  }
+  .drawer-tab.active .pull{ background: var(--brass); }
+
+  .page{ background: var(--card); border: 1px solid var(--rule-strong); border-top: none; border-radius: 0 0 10px 10px; padding: 26px 22px 32px; box-shadow: var(--shadow); }
+  @media (max-width: 480px){ .page{ padding: 20px 14px 26px; } }
+
+  /* ---------- Buttons ---------- */
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    border-radius: 6px; border: 1px solid transparent;
+    padding: 13px 22px; font-size: 0.95rem; font-weight: 600;
+    transition: transform .08s ease, filter .15s ease, opacity .15s ease;
+  }
+  .btn:active{ transform: scale(0.98); }
+  .btn-primary{ background: var(--library); color: var(--card); }
+  .btn-primary:hover{ filter: brightness(1.12); }
+  .btn-primary:disabled{ opacity: 0.4; cursor: not-allowed; }
+  .btn-brass{ background: var(--brass); color: #2a2412; }
+  .btn-brass:hover{ filter: brightness(1.08); }
+  .btn-ghost{ background: transparent; border: 1px solid var(--rule-strong); color: var(--ink); }
+  .btn-ghost:hover{ background: rgba(42,36,28,0.05); }
+  .btn-block{ width: 100%; }
+  .btn-sm{ padding: 8px 14px; font-size: 0.82rem; }
+
+  /* ---------- Form bits ---------- */
+  label.field-label{
+    display:block; font-family:'JetBrains Mono',monospace; font-size:0.68rem;
+    letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-soft);
+    margin-bottom: 6px;
+  }
+  .field{ margin-bottom: 16px; }
+  .input, textarea.input{
+    width:100%; padding: 10px 12px; border: 1px solid var(--rule-strong);
+    border-radius: var(--radius); background: #fffdf7; color: var(--ink); font-size: 0.95rem;
+  }
+  textarea.input{ resize: vertical; min-height: 64px; }
+
+  /* ---------- Choice cards (study setup) ---------- */
+  .choice-group{ display:flex; flex-direction:column; gap:10px; margin-bottom: 22px; }
+  .choice-card{
+    display:flex; align-items:center; gap:12px;
+    border: 1px solid var(--rule-strong); border-radius: 8px; padding: 14px 16px;
+    background: #fffdf7; transition: border-color .15s, background .15s;
+  }
+  .choice-card.selected{ border-color: var(--brass); background: #fbf2dc; }
+  .choice-card input{ width:18px; height:18px; accent-color: var(--brass); flex-shrink:0; }
+  .choice-card .ct{ font-weight:600; }
+  .choice-card .cd{ font-size:0.82rem; color: var(--ink-soft); margin-top:2px; }
+  .choice-card.disabled{ opacity:0.45; }
+
+  .count-row{ display:flex; gap:10px; align-items:center; margin-bottom: 22px; flex-wrap: wrap; }
+  .count-row .input{ max-width: 110px; }
+  .toggle-all{
+    border: 1px solid var(--rule-strong); border-radius: var(--radius);
+    padding: 10px 16px; background: #fffdf7; font-weight:600; font-size:0.9rem;
+  }
+  .toggle-all.active{ background: var(--library); color: var(--card); border-color: var(--library); }
+
+  .section-title{
+    font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--ink-soft); font-family:'JetBrains Mono',monospace;
+    margin: 0 0 10px;
+  }
+  .hr{ border:none; border-top:1px dashed var(--rule); margin: 22px 0; }
+
+  /* ---------- Flashcard ---------- */
+  .session-head{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom: 18px; }
+  .session-head .mono{ font-size: 0.78rem; color: var(--ink-soft); }
+  .progress-bar{ height:4px; background: var(--rule); border-radius:2px; overflow:hidden; margin-bottom: 26px; }
+  .progress-fill{ height:100%; background: var(--brass); transition: width .25s ease; }
+
+  .flip-stage{ perspective: 1400px; margin: 0 auto 24px; max-width: 420px; }
+  .flip-card{ position:relative; width:100%; height: 280px; cursor:pointer; }
+  .flip-inner{
+    position:absolute; inset:0; transition: transform .5s cubic-bezier(.2,.8,.2,1);
+    transform-style: preserve-3d;
+  }
+  .flip-card.flipped .flip-inner{ transform: rotateY(180deg); }
+  .face{
+    position:absolute; inset:0; backface-visibility:hidden;
+    border-radius: 6px; background: #fffdf5;
+    border: 1px solid var(--rule-strong);
+    box-shadow: 0 1px 0 rgba(42,36,28,0.06), 0 14px 30px -16px rgba(42,36,28,0.4);
+    display:flex; flex-direction:column; padding: 22px 24px;
+  }
+  .face::before{
+    content:""; position:absolute; left:22px; top:14px; width:14px; height:14px;
+    border-radius:50%; background: var(--paper); box-shadow: inset 0 1px 3px rgba(0,0,0,0.25);
+  }
+  .face::after{
+    content:""; position:absolute; left:0; right:0; top:42px; height:1px; background: var(--rust); opacity:0.45;
+  }
+  .face .ruled{
+    position:absolute; left:24px; right:24px; top:96px; bottom:24px;
+    background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 27px, var(--rule) 27px, var(--rule) 28px);
+  }
+  .face-back .flip-inner-rotate{ transform: rotateY(180deg); }
+  .face-back{ transform: rotateY(180deg); }
+  .face-tab{
+    position:absolute; top:14px; right:18px; font-family:'JetBrains Mono',monospace;
+    font-size:0.68rem; letter-spacing:0.08em; color: var(--ink-soft); text-transform:lowercase;
+  }
+  .face-word{
+    font-family:'Fraunces',Georgia,serif; font-weight:600; font-size: clamp(1.5rem,7vw,2.1rem);
+    margin-top: 56px; line-height:1.15; color: var(--ink); text-align:center;
+  }
+  .face-hint{ margin-top:auto; text-align:center; font-size:0.74rem; color: var(--ink-soft); font-style: italic; }
+  .face-def{ margin-top: 56px; font-size: 1.02rem; line-height:1.5; }
+  .face-ex{ margin-top: 14px; font-size: 0.9rem; color: var(--ink-soft); font-style: italic; line-height:1.45; }
+
+  .rate-row{ display:flex; gap:10px; max-width:420px; margin: 0 auto; }
+  .rate-btn{
+    flex:1; border-radius:7px; padding: 14px 8px; text-align:center; font-weight:600; font-size:0.86rem;
+    border: 1px solid transparent; color:#fff; transition: transform .08s, filter .15s;
+  }
+  .rate-btn:active{ transform: scale(0.97); }
+  .rate-unknown{ background: var(--unknown); }
+  .rate-unsure{ background: var(--unsure); color:#2a2412; }
+  .rate-known{ background: var(--known); }
+  .rate-btn:disabled{ opacity:0.3; cursor:default; }
+
+  .session-summary{ text-align:center; padding: 12px 0; }
+  .session-summary .big{ font-family:'Fraunces',Georgia,serif; font-size:2.4rem; font-weight:600; color: var(--library-deep); }
+  .summary-stats{ display:flex; justify-content:center; gap:22px; margin: 18px 0 26px; }
+  .summary-stats div{ text-align:center; }
+  .summary-stats .n{ font-family:'JetBrains Mono',monospace; font-size:1.3rem; font-weight:600; }
+  .summary-stats .l{ font-size:0.7rem; letter-spacing:0.08em; text-transform:uppercase; color:var(--ink-soft); }
+  .summary-actions{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+
+  .empty-note{
+    border: 1px dashed var(--rule-strong); border-radius:8px; padding: 18px; text-align:center;
+    color: var(--ink-soft); font-size: 0.9rem;
+  }
+
+  /* ---------- Library page ---------- */
+  .lib-toolbar{ display:flex; gap:10px; margin-bottom:18px; flex-wrap:wrap; }
+  .lib-toolbar .input{ flex:1; min-width: 140px; }
+  .lib-count{ font-size:0.78rem; color: var(--ink-soft); margin-bottom: 14px; }
+
+  .add-form{
+    border: 1px solid var(--rule-strong); border-radius:8px; padding: 18px; margin-bottom: 22px; background: #fffdf7;
+  }
+  .add-form-grid{ display:grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+  .add-form-grid .field.full{ grid-column: 1 / -1; }
+  @media (max-width:520px){ .add-form-grid{ grid-template-columns: 1fr; } }
+
+  .card-row{
+    border-bottom: 1px solid var(--rule); padding: 13px 2px; cursor:pointer;
+  }
+  .card-row:last-child{ border-bottom:none; }
+  .card-row-top{ display:flex; justify-content:space-between; align-items:center; gap:10px; }
+  .card-row-word{ font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:1.05rem; }
+  .card-row-pos{ font-size:0.74rem; color: var(--ink-soft); margin-left:8px; font-style:italic; }
+  .level-pill{
+    font-family:'JetBrains Mono',monospace; font-size:0.62rem; letter-spacing:0.06em; text-transform:uppercase;
+    padding: 3px 9px; border-radius: 20px; color:#fff; white-space:nowrap; flex-shrink:0;
+  }
+  .pill-known{ background: var(--known); }
+  .pill-unsure{ background: var(--unsure); color:#2a2412; }
+  .pill-unknown{ background: var(--unknown); }
+  .card-row-detail{ margin-top:8px; font-size:0.9rem; color: var(--ink-soft); display:none; }
+  .card-row.expanded .card-row-detail{ display:block; }
+  .card-row-detail .ex{ font-style:italic; margin-top:4px; }
+  .card-row-actions{ margin-top:10px; display:flex; gap:8px; }
+
+  /* ---------- Metrics page ---------- */
+  .metric-grid{ display:grid; grid-template-columns: repeat(3,1fr); gap:10px; margin-bottom: 26px; }
+  @media (max-width:480px){ .metric-grid{ grid-template-columns: repeat(2,1fr); } }
+  .metric-box{
+    border:1px solid var(--rule-strong); border-radius:8px; padding:14px 10px; text-align:center; background:#fffdf7;
+  }
+  .metric-box .n{ font-family:'JetBrains Mono',monospace; font-size:1.5rem; font-weight:600; color: var(--library-deep); }
+  .metric-box .l{ font-size:0.66rem; letter-spacing:0.06em; text-transform:uppercase; color: var(--ink-soft); margin-top:3px; }
+
+  .heat-wrap{ overflow-x:auto; padding-bottom: 4px; }
+  .heat-grid{ display:grid; grid-auto-flow:column; grid-template-rows: repeat(7, 12px); gap:3px; width:max-content; }
+  .heat-cell{ width:12px; height:12px; border-radius:2px; background: var(--rule); }
+  .heat-legend{ display:flex; align-items:center; gap:6px; font-size:0.68rem; color:var(--ink-soft); margin-top:8px; justify-content:flex-end; }
+  .heat-legend .heat-cell{ display:inline-block; }
+
+  .bar-row{ display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+  .bar-row .lbl{ width:78px; font-size:0.78rem; flex-shrink:0; }
+  .bar-track{ flex:1; height:10px; background: var(--rule); border-radius:6px; overflow:hidden; }
+  .bar-fill{ height:100%; border-radius:6px; }
+  .bar-row .val{ width:34px; text-align:right; font-family:'JetBrains Mono',monospace; font-size:0.8rem; flex-shrink:0; }
+
+  .chart-empty{ text-align:center; color:var(--ink-soft); font-size:0.85rem; padding: 30px 0; }
+
+  .toast{
+    position: fixed; bottom: 22px; left:50%; transform: translateX(-50%);
+    background: var(--library-deep); color: var(--card); padding: 10px 18px; border-radius: 6px;
+    font-size: 0.85rem; box-shadow: var(--shadow); opacity:0; transition: opacity .25s; pointer-events:none; z-index:100;
+  }
+  .toast.show{ opacity:1; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="masthead">
+    <h1 class="display">Lexicon</h1>
+    <p class="sub" id="masthead-sub">a working vocabulary, filed by hand</p>
+  </div>
+  <div class="drawer-tabs" id="tabs"></div>
+  <div class="page" id="page"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const SEED_CARDS = [
+{w:"Onerous",p:"adj.",d:"Involving a heavy, burdensome obligation.",e:"Filing the merger paperwork was an onerous task that took the legal team all weekend."},
+{w:"Ingenue",p:"n.",d:"A naive, innocent young woman, especially as a stock character in drama.",e:"She was cast as the wide-eyed ingenue in the touring production."},
+{w:"Spoonerism",p:"n.",d:"A verbal slip in which the initial sounds of two words are swapped, often with comic effect.",e:"Saying 'a lack of pies' instead of 'a pack of lies' is a classic spoonerism."},
+{w:"Moribund",p:"adj.",d:"In terminal decline; at the point of death or extinction.",e:"The once-thriving newspaper had become a moribund publication by the time it folded."},
+{w:"Sordid",p:"adj.",d:"Morally degrading, dirty, or squalid.",e:"The tabloid dug up every sordid detail of the senator's past."},
+{w:"Rectitude",p:"n.",d:"Moral integrity; correctness of judgment or behavior.",e:"Her reputation for rectitude made her the obvious choice for the ethics board."},
+{w:"Acrimonious",p:"adj.",d:"Bitter and sharp in tone, especially in disagreement.",e:"The divorce proceedings turned acrimonious over custody of the house."},
+{w:"Paraprosdokian",p:"n.",d:"A figure of speech where the latter part of a sentence is unexpected, often for comic effect.",e:"\"I've had a wonderful evening, but this wasn't it\" is a famous paraprosdokian."},
+{w:"Digitiform",p:"adj.",d:"Shaped like a finger or digit.",e:"The sea anemone's digitiform tentacles swayed gently in the current."},
+{w:"Pyriform",p:"adj.",d:"Pear-shaped.",e:"The vase had a pyriform body that widened toward the base."},
+{w:"Apoplectic",p:"adj.",d:"Overcome with extreme anger; furious.",e:"He went apoplectic when he saw the parking ticket on his windshield."},
+{w:"Perfervid",p:"adj.",d:"Marked by intense, overwrought emotion or zeal.",e:"The candidate's perfervid speech roused the crowd but alarmed the moderators."},
+{w:"Hegira",p:"n.",d:"A journey or flight, especially to escape danger; historically, Muhammad's flight from Mecca to Medina.",e:"Their hegira from the war-torn city took them across three borders."},
+{w:"Parochial",p:"adj.",d:"Narrow in scope or outlook; limited to local concerns.",e:"His parochial worldview rarely accounted for how things were done elsewhere."},
+{w:"Retinue",p:"n.",d:"A group of advisers, assistants, or others accompanying an important person.",e:"The ambassador arrived with a retinue of aides and translators."},
+{w:"Roman à clef",p:"n.",d:"A novel depicting real people and events under a thin veil of fiction.",e:"Critics quickly identified the senator behind the corrupt mayor in her roman à clef."},
+{w:"Exculpatory",p:"adj.",d:"Tending to clear someone of guilt or blame.",e:"The newly discovered footage was exculpatory and led to his release."},
+{w:"Prurient",p:"adj.",d:"Having an excessive interest in sexual matters.",e:"The article's prurient details overshadowed its actual reporting."},
+{w:"Recuse",p:"v.",d:"To excuse oneself from a case or decision because of a conflict of interest.",e:"The judge recused herself after learning the defendant was a former client."},
+{w:"Sanguine",p:"adj.",d:"Optimistic or positive, especially in a difficult situation.",e:"Despite the layoffs, he remained sanguine about the company's future."},
+{w:"Esprit",p:"n.",d:"Liveliness of mind and expression; wit.",e:"Her conversation sparkled with esprit, even on the dullest topics."},
+{w:"Perfunctory",p:"adj.",d:"Carried out with minimal effort or reflection, as a routine duty.",e:"He gave the report a perfunctory glance before signing off."},
+{w:"Interloper",p:"n.",d:"A person who interferes in affairs that are not their concern, often an outsider.",e:"The longtime employees treated the new consultant as an interloper."},
+{w:"Irascible",p:"adj.",d:"Easily provoked to anger.",e:"The irascible old chef was known for throwing pans when orders were late."},
+{w:"Quixotic",p:"adj.",d:"Idealistic to an impractical degree; pursuing unrealistic goals.",e:"His quixotic plan to reform the entire department from the mailroom never stood a chance."},
+{w:"Reified",p:"adj./v.",d:"Made into a concrete thing; treated as real or material.",e:"Over decades, the loose idea of 'national character' became reified into policy."},
+{w:"Odious",p:"adj.",d:"Extremely unpleasant; repugnant.",e:"He found the task of informing the family odious but necessary."},
+{w:"Adjure",p:"v.",d:"To urge or command someone solemnly.",e:"The elder adjured the young soldiers to remember their oath."},
+{w:"Chaffed",p:"v.",d:"Teased good-naturedly; bantered.",e:"His teammates chaffed him for missing the easy shot."},
+{w:"Mendacious",p:"adj.",d:"Lying or untruthful.",e:"The witness's mendacious testimony unraveled under cross-examination."},
+{w:"Occlude",p:"v.",d:"To block or close off a passage or opening.",e:"A blood clot can occlude an artery and trigger a stroke."},
+{w:"Dowdy",p:"adj.",d:"Unfashionable and dull in appearance.",e:"She felt dowdy next to her stylish coworkers."},
+{w:"Fetter",p:"v./n.",d:"To restrain or restrict; a chain or shackle.",e:"Outdated regulations fettered the company's ability to innovate."},
+{w:"Mordant",p:"adj.",d:"Sharply sarcastic or biting in wit.",e:"Her mordant film reviews made her both feared and beloved."},
+{w:"Obfuscate",p:"v.",d:"To deliberately make something unclear or confusing.",e:"The spokesperson obfuscated the real reason for the delay."},
+{w:"Tryst",p:"n.",d:"A private romantic meeting between lovers.",e:"They arranged a tryst at the old lighthouse every summer."},
+{w:"Entreaty",p:"n.",d:"An earnest, often emotional request.",e:"Her entreaty to delay the vote fell on deaf ears."},
+{w:"Risible",p:"adj.",d:"Laughable, often in a way that invites ridicule rather than amusement.",e:"His excuse was so risible that no one in the room took it seriously."},
+{w:"Chyle",p:"n.",d:"A milky bodily fluid formed from digested fats, absorbed into the lymphatic system.",e:"Chyle gives lymph its characteristic milky appearance after a fatty meal."},
+{w:"Coquettish",p:"adj.",d:"Flirtatious in a playful, teasing way.",e:"She gave a coquettish smile and looked away."},
+{w:"Malaise",p:"n.",d:"A vague feeling of unease, discomfort, or sickness.",e:"A general malaise settled over the office after the announcement."},
+{w:"Petulant",p:"adj.",d:"Childishly irritable or sulky.",e:"The petulant intern stormed off after being denied a day off."},
+{w:"Indisposed",p:"adj.",d:"Slightly unwell; or unwilling to do something.",e:"She was indisposed and unable to attend the gala."},
+{w:"Skulduggery",p:"n.",d:"Underhanded or unscrupulous behavior; trickery.",e:"The audit uncovered years of financial skulduggery."},
+{w:"Snit",p:"n.",d:"A state of irritation or ill temper.",e:"He's been in a snit ever since his flight got cancelled."},
+{w:"Disabuse",p:"v.",d:"To free someone from a mistaken belief.",e:"The mentor quickly disabused her of the notion that the job would be easy."},
+{w:"Sonorous",p:"adj.",d:"Having a full, deep, resonant sound.",e:"His sonorous voice filled the cathedral without a microphone."},
+{w:"Prosaic",p:"adj.",d:"Lacking poetic beauty; ordinary or dull.",e:"After the adventure novel, the textbook felt painfully prosaic."},
+{w:"Ptomaine",p:"n.",d:"A substance produced by bacterial decomposition of protein, historically (and incorrectly) blamed for food poisoning.",e:"Old cookbooks warn of 'ptomaine poisoning' from spoiled meat."},
+{w:"Harangue",p:"n./v.",d:"A lengthy, aggressive, and forceful speech or lecture.",e:"He launched into a harangue about office printer etiquette."},
+{w:"Salubrious",p:"adj.",d:"Favorable to health; wholesome.",e:"The mountain town was known for its salubrious climate."},
+{w:"Vexatious",p:"adj.",d:"Causing annoyance or frustration; also, a legal filing made to harass rather than to win.",e:"The court dismissed the suit as vexatious litigation."},
+{w:"Adjuration",p:"n.",d:"A solemn or earnest appeal or command.",e:"The captain's adjuration to stay calm helped steady the passengers."},
+{w:"Remit",p:"n./v.",d:"The task or area of activity officially assigned to a person or organization; or, to send money/refer a matter elsewhere.",e:"Reviewing zoning disputes fell outside the committee's remit."},
+{w:"Reticulate",p:"adj./v.",d:"Having a pattern resembling a net; or to arrange in such a pattern.",e:"The leaf's reticulate veins were clearly visible against the light."},
+{w:"Bilk",p:"v.",d:"To cheat or defraud someone, especially of money owed.",e:"He was accused of bilking investors out of millions."},
+{w:"Draconian",p:"adj.",d:"Excessively harsh or severe, especially regarding laws.",e:"Employees protested the company's draconian new attendance policy."},
+{w:"Addled",p:"adj.",d:"Confused; unable to think clearly.",e:"Jet lag left her addled for most of the conference."},
+{w:"Concupiscent",p:"adj.",d:"Filled with strong sexual desire; lustful.",e:"The poem's concupiscent imagery scandalized its first readers."},
+{w:"Nonplussed",p:"adj.",d:"So surprised or confused that one doesn't know how to react.",e:"He was nonplussed when his joke was met with total silence."},
+{w:"Pallid",p:"adj.",d:"Pale, especially from illness or fear.",e:"Her pallid complexion worried the nurse immediately."},
+{w:"Anemic",p:"adj.",d:"Lacking vitality or strength; medically, deficient in healthy red blood cells.",e:"The quarter's anemic sales growth disappointed shareholders."},
+{w:"Umbrage",p:"n.",d:"Offense or resentment, as in 'to take umbrage.'",e:"He took umbrage at the suggestion that his work was sloppy."},
+{w:"Derivative",p:"adj./n.",d:"Imitative of another's work; lacking originality.",e:"Critics dismissed the film as a derivative knockoff of better space operas."},
+{w:"Apprehension",p:"n.",d:"Anxiety or fear about something that might happen.",e:"She felt a flicker of apprehension before opening the test results."},
+{w:"Sallow",p:"adj.",d:"Of an unhealthy yellowish skin tone.",e:"Months without sunlight had left his skin sallow."},
+{w:"Clemency",p:"n.",d:"Mercy, especially leniency shown to someone who could be punished severely.",e:"The governor granted clemency to the aging inmate."},
+{w:"Aspersion",p:"n.",d:"A false or misleading attack on someone's reputation, as in 'cast aspersions.'",e:"He resented the aspersions cast on his integrity during the hearing."},
+{w:"Convalesce",p:"v.",d:"To recover health and strength gradually after illness.",e:"She went to the coast to convalesce after the surgery."},
+{w:"Protuberance",p:"n.",d:"A part that bulges out from a surface.",e:"A small protuberance on the trunk marked where the branch had been removed."},
+{w:"Subsumed",p:"v.",d:"Included or absorbed within a larger category or entity.",e:"The smaller agency was subsumed into the new federal department."},
+{w:"Aplomb",p:"n.",d:"Self-confident assurance, especially under pressure.",e:"She handled the hostile questions with remarkable aplomb."},
+{w:"Sublimate",p:"v.",d:"To redirect an impulse, often base or unacceptable, into a socially acceptable activity.",e:"He sublimated his frustration into hours of intense rock climbing."},
+{w:"Curio",p:"n.",d:"A rare, unusual, or intriguing object.",e:"The shelf was crowded with curios collected from decades of travel."},
+{w:"Impugn",p:"v.",d:"To call into question the integrity or validity of something.",e:"The defense attorney tried to impugn the witness's memory of events."},
+{w:"Fealty",p:"n.",d:"Loyalty or allegiance owed to a lord, or by extension, to any cause or person.",e:"The knights swore fealty to the new king."},
+{w:"Joie de vivre",p:"n.",d:"Exuberant enjoyment of life.",e:"Even after retirement, she approached each day with the same joie de vivre."},
+{w:"Bloviate",p:"v.",d:"To speak at length in a pompous or self-important way.",e:"The pundit bloviated for ten minutes without answering the question."},
+{w:"Purloin",p:"v.",d:"To steal, often by stealth or breach of trust.",e:"The clerk had quietly purloined office supplies for years."},
+{w:"Precipitously",p:"adv.",d:"In a sudden, steep, or hasty manner.",e:"Stock prices fell precipitously after the announcement."},
+{w:"Detritus",p:"n.",d:"Waste or debris of any kind; the remains of something broken down.",e:"The receding flood left detritus scattered across the parking lot."},
+{w:"Velleity",p:"n.",d:"A wish or inclination too weak to lead to action.",e:"He felt a velleity to learn the violin but never bought one."},
+{w:"Toil",p:"n./v.",d:"Hard, exhausting work, or to labor at such work.",e:"Years of toil in the fields had bent his back."},
+{w:"Verve",p:"n.",d:"Energy, enthusiasm, and spirit, especially in artistic expression.",e:"The young conductor led the orchestra with unexpected verve."},
+{w:"Dissuade",p:"v.",d:"To persuade someone not to do something.",e:"Nothing could dissuade her from hiking the trail alone."},
+{w:"Sapient",p:"adj.",d:"Wise or showing great wisdom or sagacity.",e:"The old judge was known for his sapient and measured rulings."},
+{w:"Probity",p:"n.",d:"Strong adherence to moral principles; honesty.",e:"His probity in handling the firm's accounts was never questioned."},
+{w:"Muckraking",p:"n./adj.",d:"Investigative journalism that exposes scandal, corruption, or wrongdoing.",e:"Her muckraking exposé led to three executives resigning."},
+{w:"Feculence",p:"n.",d:"Filth or foulness; the state of being full of waste matter.",e:"The canal's feculence made it unsafe to swim in for decades."},
+{w:"Indecorous",p:"adj.",d:"Not in keeping with good taste or propriety.",e:"His indecorous jokes at the funeral shocked the other mourners."},
+{w:"Contretemps",p:"n.",d:"An awkward or embarrassing minor disagreement or mishap.",e:"A small contretemps over the bill nearly ruined the dinner."},
+{w:"Chicanery",p:"n.",d:"Trickery or deception, especially in legal or political dealings.",e:"Voters grew weary of the chicanery surrounding the redistricting plan."},
+{w:"Fervor",p:"n.",d:"Intense and passionate feeling.",e:"She campaigned for the cause with religious fervor."},
+{w:"Terse",p:"adj.",d:"Brief and to the point, sometimes to the point of curtness.",e:"His terse reply made it clear he didn't want to discuss it."},
+{w:"Tawdry",p:"adj.",d:"Showy but cheap and of low quality; also, sordid.",e:"The motel's tawdry decor matched its reputation."},
+{w:"Valediction",p:"n.",d:"A farewell statement or speech.",e:"His valediction to the graduating class brought several parents to tears."},
+{w:"Fulmination",p:"n.",d:"A loud, vehement denunciation or protest.",e:"The op-ed was a fulmination against the new zoning rules."},
+{w:"Mountebank",p:"n.",d:"A swindler or charlatan who deceives people, especially through false claims.",e:"The traveling 'doctor' was exposed as a mountebank selling colored water."},
+{w:"Accede",p:"v.",d:"To agree to a demand or request; or to formally take up a position.",e:"After hours of negotiation, management acceded to the workers' demands."},
+{w:"Frippery",p:"n.",d:"Showy but useless ornamentation; also, unnecessary frills.",e:"She stripped the proposal of frippery and focused on the budget."},
+{w:"Bedevil",p:"v.",d:"To torment or cause persistent trouble for.",e:"Software bugs bedeviled the launch for weeks."},
+{w:"Fetid",p:"adj.",d:"Having an extremely unpleasant smell.",e:"A fetid odor rose from the clogged drain."},
+{w:"Didactic",p:"adj.",d:"Intended to teach or instruct, often excessively so.",e:"The film's didactic ending undercut its otherwise subtle storytelling."},
+{w:"Flout",p:"v.",d:"To openly disregard a rule or convention.",e:"The restaurant flouted health codes for months before inspectors caught on."},
+{w:"Chastening",p:"adj./v.",d:"Having a humbling or corrective effect.",e:"Losing the championship was a chastening experience for the young team."},
+{w:"Knave",p:"n.",d:"A dishonest or unscrupulous man; archaically, a playing-card jack.",e:"The play's villain is a scheming knave who poisons his own brother."},
+{w:"Feckless",p:"adj.",d:"Lacking initiative or sense of responsibility; ineffective.",e:"His feckless management let the project drift for months."},
+{w:"Taxonomy",p:"n.",d:"A system of classification, especially of organisms or concepts.",e:"Linnaeus's taxonomy still underpins how biologists name species."},
+{w:"Lithe",p:"adj.",d:"Thin, flexible, and graceful in movement.",e:"The dancer's lithe frame made the lift look effortless."},
+{w:"Locative",p:"adj./n.",d:"Relating to location; in grammar, a case indicating place.",e:"Latin's locative case survives in only a few fossilized forms."},
+{w:"Remonstrate",p:"v.",d:"To make a forcefully reproachful protest or complaint.",e:"She remonstrated with the referee over the missed call."},
+{w:"Salient",p:"adj.",d:"Most noticeable or important; prominent.",e:"The report's most salient finding was buried on page forty."},
+{w:"Fleet",p:"adj.",d:"Fast-moving; swift.",e:"The fleet gazelle outran the pursuing cheetah."},
+{w:"Ophiophilist",p:"n.",d:"A person who loves or collects snakes.",e:"As an ophiophilist, she kept six non-venomous snakes at home."},
+{w:"Perfidy",p:"n.",d:"Deceitfulness or treachery; betrayal of trust.",e:"The general's perfidy toward his own troops was never forgiven."},
+{w:"Insouciance",p:"n.",d:"A casual lack of concern; carefree indifference.",e:"He faced the audit with surprising insouciance."},
+{w:"Repose",p:"n./v.",d:"A state of rest, calm, or relaxation; to rest.",e:"She found a moment of repose on the quiet balcony."},
+{w:"Exult",p:"v.",d:"To show or feel triumphant elation.",e:"The team exulted as the final whistle blew."},
+{w:"Matriculate",p:"v.",d:"To enroll formally as a member of a college or university.",e:"She matriculated at the university the same year her father graduated."},
+{w:"Ponderous",p:"adj.",d:"Slow and clumsy due to great weight; also, dull and laborious in style.",e:"The committee's ponderous deliberations dragged the decision out for months."},
+{w:"Reprobate",p:"n./adj.",d:"An unprincipled or immoral person.",e:"His grandfather was, by his own admission, a charming old reprobate."},
+{w:"Obscuration",p:"n.",d:"The act of obscuring or darkening; the state of being hidden.",e:"The eclipse caused a brief obscuration of the sun."},
+{w:"Predilection",p:"n.",d:"A preference or special liking for something.",e:"He has a predilection for overly complicated metaphors."},
+{w:"Cull",p:"v.",d:"To select from a larger group, often removing the weaker members.",e:"The editor culled the weakest stories from the anthology."},
+{w:"Mercurial",p:"adj.",d:"Subject to sudden, unpredictable changes of mood.",e:"Her mercurial temper made her brilliant but exhausting to work with."},
+{w:"Copacetic",p:"adj.",d:"In good order; entirely satisfactory.",e:"Once the invoice cleared, everything between the two companies was copacetic."},
+{w:"Prognostication",p:"n.",d:"A prediction or forecast.",e:"Most economic prognostications for the quarter turned out to be wrong."},
+{w:"Philanderer",p:"n.",d:"A man who habitually has casual affairs with women.",e:"The novel's protagonist is an unrepentant philanderer."},
+{w:"Caviling",p:"v./adj.",d:"Raising trivial or unnecessary objections.",e:"He spent the meeting caviling over font choices instead of content."},
+{w:"Torrid",p:"adj.",d:"Extremely hot; or intensely passionate.",e:"They had a torrid affair that ended as suddenly as it began."},
+{w:"Pilfer",p:"v.",d:"To steal small or trivial things, often repeatedly.",e:"Someone had been pilfering snacks from the office fridge for weeks."},
+{w:"Bilious",p:"adj.",d:"Affected by indigestion; also, irritable or bad-tempered.",e:"He woke up bilious and snapped at everyone before coffee."},
+{w:"Effigy",p:"n.",d:"A crude figure or representation of a person, often burned or hanged in protest.",e:"Protesters burned an effigy of the unpopular minister."},
+{w:"Palliative",p:"adj./n.",d:"Relieving symptoms without curing the underlying cause.",e:"The hospital expanded its palliative care unit this year."},
+{w:"Loquacious",p:"adj.",d:"Very talkative.",e:"The usually loquacious host went unusually quiet during the interview."},
+{w:"Knell",p:"n.",d:"The sound of a bell rung slowly, especially for a death or funeral; a sign of the end of something.",e:"The factory's closure sounded the knell for the whole town's economy."},
+{w:"Cabal",p:"n.",d:"A small, secretive group of people united for a private purpose, often political.",e:"A cabal of senior executives quietly engineered the CEO's ouster."},
+{w:"Champing",p:"v.",d:"Biting or chewing impatiently, as in 'champing at the bit.'",e:"The runners were champing at the bit before the starting gun fired."},
+{w:"Diminutive",p:"adj./n.",d:"Extremely small; also, a word form expressing smallness or affection.",e:"'Kitty' is a diminutive of 'cat.'"},
+{w:"Intimate",p:"v./adj.",d:"To suggest or hint at something subtly; or, closely familiar.",e:"Her tone intimated that the decision was already made."},
+{w:"Gravitas",p:"n.",d:"Dignity, seriousness, or weight of manner.",e:"The new anchor brought a gravitas the show had been missing."},
+{w:"Banal",p:"adj.",d:"Lacking originality; boringly ordinary.",e:"The speech was full of banal platitudes about teamwork."},
+{w:"Arcane",p:"adj.",d:"Mysterious and known only to a few; obscure.",e:"The tax code is full of arcane rules even accountants struggle to explain."},
+{w:"Apprehensive",p:"adj.",d:"Anxious or fearful about a possible outcome.",e:"She was apprehensive about meeting her in-laws for the first time."},
+{w:"Itinerant",p:"adj.",d:"Traveling from place to place, especially for work.",e:"The itinerant preacher moved from town to town each season."},
+{w:"Filch",p:"v.",d:"To steal something, typically of little value.",e:"He filched a pen from every hotel he'd ever stayed in."},
+{w:"Consternation",p:"n.",d:"A feeling of anxiety or dismay, often at something unexpected.",e:"News of the merger caused consternation among the staff."},
+{w:"Dirigible",p:"n.",d:"An airship that can be steered, typically a large gas-filled balloon.",e:"The old dirigible hangar still stands at the edge of the airfield."},
+{w:"Missive",p:"n.",d:"A letter, especially a long or official one.",e:"She fired off an angry missive to the editor that evening."},
+{w:"Gossamer",p:"adj./n.",d:"Extremely light, thin, and delicate.",e:"A gossamer veil of fog hung over the valley at dawn."},
+{w:"Dotage",p:"n.",d:"The period of life marked by a decline of mental faculties due to old age.",e:"In his dotage, he could no longer remember his grandchildren's names."},
+{w:"Internecine",p:"adj.",d:"Relating to conflict within a group or organization, often destructive to both sides.",e:"Internecine squabbling tore the party apart before the election."},
+{w:"Contusion",p:"n.",d:"A bruise; an injury that doesn't break the skin.",e:"The fall left a deep contusion on his thigh."},
+{w:"Druthers",p:"n.",d:"One's own way or preference, as in 'if I had my druthers.'",e:"If I had my druthers, we'd be working from the beach right now."},
+{w:"Anthropophagy",p:"n.",d:"The practice of eating human flesh; cannibalism.",e:"The expedition's diary hints, chillingly, at anthropophagy during the famine."},
+{w:"Churlish",p:"adj.",d:"Rude in a mean-spirited or surly way.",e:"It would be churlish to refuse such a generous gift."},
+{w:"Portaging",p:"v.",d:"Carrying boats or supplies overland between navigable waters.",e:"They spent the afternoon portaging canoes around the rapids."},
+{w:"Dispensation",p:"n.",d:"Exemption from a rule or obligation; also, a system of order or government.",e:"The church granted a special dispensation for the wedding to proceed."},
+{w:"Tempestuous",p:"adj.",d:"Marked by strong and turbulent emotion; stormy.",e:"Their tempestuous relationship was the talk of the whole office."},
+{w:"Beseech",p:"v.",d:"To ask someone urgently and fervently.",e:"She beseeched the council to reconsider before the vote."},
+{w:"Perturb",p:"v.",d:"To make someone anxious or unsettled.",e:"The strange noise from the engine perturbed the whole crew."},
+{w:"Dulcet",p:"adj.",d:"Sweet and soothing, especially in sound.",e:"Her dulcet voice calmed the crying infant almost instantly."},
+{w:"Poetaster",p:"n.",d:"An inferior or untalented poet.",e:"The literary magazine was flooded with submissions from amateur poetasters."},
+{w:"Crapulent",p:"adj.",d:"Suffering from or relating to overindulgence in food or drink.",e:"He spent New Year's Day in a crapulent stupor on the couch."},
+{w:"Perfidious",p:"adj.",d:"Deceitful and untrustworthy; treacherous.",e:"History remembers him as a perfidious ally who switched sides twice."},
+{w:"Fecund",p:"adj.",d:"Highly fertile or productive, literally or figuratively.",e:"The valley's fecund soil supported three harvests a year."},
+{w:"Droll",p:"adj.",d:"Amusing in an odd, understated way.",e:"His droll asides kept the long meeting bearable."},
+{w:"Dais",p:"n.",d:"A low platform on which speakers or honored guests stand or sit.",e:"The valedictorian stepped up to the dais to deliver her speech."},
+{w:"Kvetch",p:"v./n.",d:"To complain persistently; a habitual complainer (Yiddish in origin).",e:"He likes to kvetch about the weather no matter what it's doing."},
+{w:"Assignation",p:"n.",d:"A secret romantic meeting; or the act of assigning something.",e:"They kept their assignations secret for nearly a year."},
+{w:"Vapid",p:"adj.",d:"Offering nothing stimulating or interesting; dull.",e:"The panel discussion was a string of vapid generalities."},
+{w:"Deride",p:"v.",d:"To express contempt for; to ridicule.",e:"Critics derided the film as a cynical cash grab."},
+{w:"Revile",p:"v.",d:"To criticize harshly and abusively.",e:"He was reviled in the press long before the trial even began."},
+{w:"Dither",p:"v.",d:"To be indecisive; to hesitate over a decision.",e:"Stop dithering and just pick a restaurant."},
+{w:"Vestibule",p:"n.",d:"A small entrance hall or lobby leading into a larger space.",e:"Wet umbrellas dripped in the vestibule before the meeting."},
+{w:"Audacious",p:"adj.",d:"Willing to take bold risks; showing daring or impudence.",e:"It was an audacious plan, but the board approved it anyway."},
+{w:"Convivial",p:"adj.",d:"Friendly, lively, and good-natured, especially in a social setting.",e:"The dinner had a convivial atmosphere despite the formal seating chart."},
+{w:"Terroir",p:"n.",d:"The complete natural environment in which a wine or food is produced, said to give it distinctive character.",e:"Winemakers in the region credit the chalky terroir for the wine's minerality."},
+{w:"Forby",p:"adv./prep.",d:"Besides; in addition to (chiefly Scots and Northern English usage).",e:"He brought three guests, and a dog forby."},
+{w:"Spirant",p:"n.",d:"A consonant sound produced by partial obstruction of the airflow; a fricative.",e:"The 'f' and 'v' sounds are both spirants in English."},
+{w:"Discursive",p:"adj.",d:"Tending to digress from the main topic; rambling.",e:"His discursive lecture wandered from physics to philosophy and back."},
+{w:"Equably",p:"adv.",d:"In a calm and even-tempered manner.",e:"She handled the crisis equably while everyone else panicked."},
+{w:"Convolve",p:"v.",d:"To combine two functions or signals into a third, in mathematics; loosely, to coil or twist together.",e:"The audio filter convolves the input signal with the reverb's impulse response."},
+{w:"Pervicacious",p:"adj.",d:"Stubbornly persistent; obstinate.",e:"The pervicacious old farmer refused every offer to sell the land."},
+{w:"Minacious",p:"adj.",d:"Threatening or menacing.",e:"A minacious silence fell over the courtroom before the verdict."},
+{w:"Bacchanal",p:"n.",d:"A wild, drunken celebration or party.",e:"The wrap party turned into a full bacchanal by midnight."},
+{w:"Effusive",p:"adj.",d:"Expressing feelings, especially gratitude or approval, in an unrestrained or heartfelt way.",e:"He was effusive in his thanks to the volunteers."},
+{w:"Assiduous",p:"adj.",d:"Showing great care, thoroughness, and diligence.",e:"Her assiduous note-taking made her the unofficial historian of the lab."},
+{w:"Misanthrope",p:"n.",d:"A person who dislikes humankind in general.",e:"He jokes that he's a misanthrope, but he volunteers every weekend."},
+{w:"Insolvent",p:"adj.",d:"Unable to pay debts owed; bankrupt.",e:"The company was declared insolvent after years of mounting losses."},
+{w:"Vex",p:"v.",d:"To cause annoyance or worry.",e:"The riddle vexed even the brightest students in class."},
+{w:"Auteur",p:"n.",d:"A filmmaker whose personal influence and control over a film is so great they are regarded as its author.",e:"Critics treat him as an auteur, citing his consistent visual style across films."},
+{w:"Writ",p:"n.",d:"A formal written order issued by a court or legal authority.",e:"The sheriff served the writ at the defendant's place of business."},
+{w:"Coloratura",p:"n.",d:"Elaborate ornamentation in vocal music, or a soprano specializing in such singing.",e:"The coloratura's runs in the final aria drew a standing ovation."},
+{w:"Ecchymosis",p:"n.",d:"A discoloration of the skin caused by bleeding underneath, similar to a bruise.",e:"The bruise had spread into a wide patch of ecchymosis by morning."},
+{w:"Effulgent",p:"adj.",d:"Shining brightly; radiant.",e:"The effulgent sunset turned the whole bay gold."},
+{w:"Incommodious",p:"adj.",d:"Not spacious or convenient; cramped and uncomfortable.",e:"They were stuck in an incommodious office with no windows."},
+{w:"Vaunted",p:"adj.",d:"Boasted about; widely and often excessively praised.",e:"The vaunted new feature turned out to be barely functional at launch."},
+{w:"Recidivism",p:"n.",d:"The tendency of a convicted criminal to reoffend.",e:"The program was designed to reduce recidivism among first-time offenders."},
+{w:"Onanism",p:"n.",d:"Masturbation; figuratively, any self-indulgent or unproductive activity.",e:"He dismissed the entire art movement as intellectual onanism."},
+{w:"Cordial",p:"adj.",d:"Warm and friendly, though sometimes formally so.",e:"The two rivals kept things cordial in front of the cameras."},
+{w:"Tenable",p:"adj.",d:"Able to be defended or justified, especially of a theory or position.",e:"Her argument was tenable only if you ignored the latest data."},
+{w:"Lavage",p:"n.",d:"The washing out of a body cavity, especially medically.",e:"The doctor ordered a gastric lavage after the suspected overdose."},
+{w:"Abattoir",p:"n.",d:"A slaughterhouse.",e:"The documentary's footage from the abattoir was difficult to watch."},
+{w:"Topiary",p:"n.",d:"The art of clipping shrubs or trees into ornamental shapes.",e:"The estate's gardens were famous for their elaborate topiary."},
+{w:"Panoply",p:"n.",d:"A complete or impressive collection of things; or a full suit of armor.",e:"The buffet offered a panoply of regional dishes."},
+{w:"Ire",p:"n.",d:"Anger; wrath.",e:"The proposed toll road drew the ire of nearly every resident."},
+{w:"Curry favor",p:"v. phrase",d:"To seek to gain favor by flattery or obsequious behavior.",e:"He brought coffee for the boss every morning, clearly trying to curry favor."},
+{w:"Deracinate",p:"v.",d:"To uproot someone or something from its native environment or origin.",e:"Decades of migration had deracinated entire communities from their homeland."},
+{w:"Jitney",p:"n.",d:"A small bus or vehicle carrying passengers for a low fare, often along a set route.",e:"Locals still take the old jitney into town instead of driving."},
+{w:"Portentous",p:"adj.",d:"Of momentous or ominous significance; foreboding.",e:"A portentous silence fell as the storm clouds gathered."},
+{w:"Lugubrious",p:"adj.",d:"Mournful or gloomy, often to an exaggerated degree.",e:"The funeral march's lugubrious tone suited the occasion perfectly."},
+{w:"Larder",p:"n.",d:"A room or cupboard for storing food.",e:"The cabin's larder was stocked with enough cans to last the winter."},
+{w:"Glib",p:"adj.",d:"Fluent and confident but superficial and insincere.",e:"His glib answer didn't fool the interviewer for a second."},
+{w:"Vendible",p:"adj.",d:"Capable of being sold; marketable.",e:"Only a fraction of the harvest was vendible after the early frost."},
+{w:"Fricative",p:"n.",d:"A consonant produced by forcing air through a narrow channel; a type of spirant.",e:"The 'sh' sound in 'ship' is a voiceless fricative."},
+{w:"Premonition",p:"n.",d:"A strong feeling that something is about to happen, especially something bad.",e:"She had a premonition about the trip and almost cancelled."},
+{w:"Diddler",p:"n.",d:"(Informal) A swindler or cheat.",e:"Old slang dictionaries list 'diddler' as a term for a small-time con artist."},
+{w:"Zygoma",p:"n.",d:"The cheekbone; the bony arch of the cheek.",e:"The fracture extended across the zygoma just below the eye socket."},
+{w:"Incorrigible",p:"adj.",d:"Not able to be corrected, improved, or reformed.",e:"He remained an incorrigible prankster well into his forties."},
+{w:"Perspicuous",p:"adj.",d:"Clearly expressed and easily understood.",e:"Her perspicuous writing made even the dense legal clauses readable."},
+{w:"Parlance",p:"n.",d:"A particular way of speaking, especially terms used within a profession or group.",e:"In medical parlance, a 'contusion' is simply a bruise."},
+{w:"Caftan",p:"n.",d:"A long, loose garment, often belted, traditionally worn in parts of the Middle East and North Africa.",e:"She lounged by the pool in a flowing silk caftan."},
+{w:"Fosterage",p:"n.",d:"The practice or system of fostering a child.",e:"Fosterage was once common among noble families who sent sons to be raised elsewhere."},
+{w:"Deft",p:"adj.",d:"Neatly skillful and quick in movement or action.",e:"With a deft flick of the wrist, she plated the dessert in seconds."},
+{w:"Rancor",p:"n.",d:"Bitter, long-lasting resentment.",e:"Years later, the old rancor between the two families had not faded."},
+{w:"Confer",p:"v.",d:"To discuss something to reach a decision; or to grant a title or benefit.",e:"The doctors conferred before deciding on the treatment plan."},
+{w:"Preening",p:"v.",d:"Grooming oneself with excessive attention to appearance; or behaving with smug self-satisfaction.",e:"The winning candidate spent the press conference preening for the cameras."},
+{w:"Megalomaniac",p:"n.",d:"A person with an obsessive desire for power, grandeur, or self-importance.",e:"His coworkers joked that the new VP was a megalomaniac with a corner office."},
+{w:"Bivouac",p:"n./v.",d:"A temporary camp without tents, especially for soldiers or hikers.",e:"They bivouacked on the ridge rather than risk the descent in the dark."},
+{w:"Boon",p:"n.",d:"A benefit or blessing; something helpful.",e:"The new highway has been a boon for local businesses."},
+{w:"Contravene",p:"v.",d:"To act in violation of a rule, law, or principle.",e:"The new policy appears to contravene the company's own bylaws."},
+{w:"Cosset",p:"v.",d:"To pamper or protect someone in an overindulgent way.",e:"Her grandparents cosseted her every time she visited."},
+{w:"Megrim",p:"n.",d:"A migraine or severe headache; also, a whim or fancy.",e:"He blamed his foul mood on a megrim that had lasted all day."},
+{w:"Tsuris",p:"n.",d:"Trouble or aggravation (Yiddish in origin).",e:"The renovation caused more tsuris than anyone expected."},
+{w:"Scop",p:"n.",d:"An Old English court poet or bard.",e:"The scop recited tales of fallen kings to entertain the hall."},
+{w:"Wan",p:"adj.",d:"Pale and looking ill or tired.",e:"He looked wan and exhausted after the overnight shift."},
+{w:"Elide",p:"v.",d:"To omit or leave out, especially a sound in speech or a detail in an account.",e:"The summary elided several inconvenient facts."},
+{w:"Crestfallen",p:"adj.",d:"Sad and disappointed.",e:"The team looked crestfallen after losing in overtime."},
+{w:"Oenophilia",p:"n.",d:"A love of or enthusiasm for wine.",e:"His oenophilia led him to convert the basement into a proper cellar."},
+{w:"Inexorably",p:"adv.",d:"In a way that cannot be stopped or persuaded otherwise.",e:"The glacier moved inexorably toward the valley below."},
+{w:"Indictment",p:"n.",d:"A formal accusation of a serious crime; also, a strong criticism.",e:"The grand jury handed down an indictment on three counts."},
+{w:"Anther",p:"n.",d:"The part of a flower's stamen that contains pollen.",e:"Bees brushed against the anther as they landed on the bloom."},
+{w:"Shtum",p:"adj.",d:"Silent; quiet, especially deliberately so (Yiddish/British slang), as in 'keep shtum.'",e:"He was told to keep shtum about the surprise party."},
+{w:"Vicissitudes",p:"n.",d:"Unpredictable changes or variations in circumstances, often difficult ones.",e:"They stayed together through all the vicissitudes of a decade of moving."},
+{w:"Invective",p:"n.",d:"Harsh, abusive language directed at someone.",e:"The columnist's invective against his rivals grew sharper every week."},
+{w:"Maw",p:"n.",d:"The mouth, throat, or stomach of a hungry animal; figuratively, an opening that seems to consume.",e:"The old mine shaft looked like the maw of something enormous."},
+{w:"Lacunae",p:"n.",d:"Gaps or missing parts, especially in a text, argument, or knowledge.",e:"The historian's account is full of lacunae where records were lost."},
+{w:"Jiggery-pokery",p:"n.",d:"(Informal, British) Deceitful or dishonest behavior; trickery.",e:"Voters suspected some jiggery-pokery in how the ballots were counted."},
+{w:"Epaulette",p:"n.",d:"An ornamental shoulder piece on a military or formal uniform.",e:"His dress uniform's gold epaulettes marked his rank at a glance."},
+{w:"Indigent",p:"adj.",d:"Extremely poor; needy.",e:"The clinic offers free care to indigent patients."},
+{w:"Turpitude",p:"n.",d:"Depraved or shameful conduct.",e:"The crime was described in court as an act of moral turpitude."},
+{w:"Slovenly",p:"adj.",d:"Untidy and dirty in appearance or habits.",e:"His slovenly desk was buried under months of paperwork."},
+{w:"Impotent",p:"adj.",d:"Lacking power or strength to act effectively.",e:"The committee felt impotent to stop the project once funding was approved."},
+{w:"Lilt",p:"n.",d:"A pleasant, rhythmic swing or rise and fall in speech or music.",e:"Her Irish lilt made even the safety announcement sound musical."},
+{w:"Incontinent",p:"adj.",d:"Unable to control bodily functions; figuratively, lacking self-restraint.",e:"He was incontinent with his criticism, sparing no one in the room."},
+{w:"Regretfully vs. Regrettably",p:"usage",d:"'Regretfully' describes how the subject feels ('I regretfully declined'); 'regrettably' describes the situation itself ('Regrettably, the event was cancelled').",e:"Regretfully, I must decline — but regrettably, that means the seat goes unfilled."},
+{w:"Unabashed",p:"adj.",d:"Not embarrassed or ashamed; openly bold.",e:"She gave an unabashed account of her years as a con artist."},
+{w:"Meted",p:"v.",d:"Distributed or dealt out, especially punishment, as in 'meted out.'",e:"Harsh penalties were meted out to anyone caught cheating."},
+{w:"Adonis",p:"n.",d:"An extremely attractive young man (from the figure in Greek mythology).",e:"He strutted around the gym like a self-styled Adonis."},
+{w:"Immolate",p:"v.",d:"To kill or sacrifice, especially by fire.",e:"The monk's self-immolation became a defining image of the protest."},
+{w:"Innocuous",p:"adj.",d:"Not harmful or offensive.",e:"The comment seemed innocuous, but it landed badly at the meeting."},
+{w:"Felicitous",p:"adj.",d:"Well-suited for the occasion; apt and pleasing.",e:"His felicitous choice of words put the grieving family at ease."},
+{w:"Capitulate",p:"v.",d:"To surrender or give in to a demand, usually after resistance.",e:"After months of strikes, the company finally capitulated to the union's demands."},
+{w:"Apostasy",p:"n.",d:"The abandonment of one's religious or political beliefs.",e:"His conversion was treated as apostasy by his former congregation."},
+{w:"Recompense",p:"n./v.",d:"Compensation for loss, harm, or service; to repay.",e:"The settlement offered some recompense for the years of lost wages."},
+{w:"Luddite",p:"n.",d:"A person opposed to new technology or ways of working.",e:"He jokes that he's a Luddite, but he just doesn't like updating his phone."},
+{w:"Misanthropic",p:"adj.",d:"Disliking humankind in general.",e:"The hermit's misanthropic reputation was mostly exaggerated by the villagers."},
+{w:"Evince",p:"v.",d:"To clearly reveal or demonstrate a feeling or quality.",e:"Her calm answers evinced a confidence the other candidates lacked."},
+{w:"Persnickety",p:"adj.",d:"Excessively fussy about details; overly particular.",e:"He's persnickety about how the dishwasher gets loaded."},
+{w:"Lunting",p:"v.",d:"(Scots) Walking outdoors while smoking a pipe.",e:"He spent his evenings lunting along the same quiet path."},
+{w:"Continually vs. Continuously",p:"usage",d:"'Continually' means recurring frequently with breaks ('he continually interrupts'); 'continuously' means without any interruption at all ('the machine ran continuously for a week').",e:"The alarm went off continually all night, though the power stayed on continuously."},
+{w:"Remittent",p:"adj.",d:"Marked by periods of lessening and increasing, especially of a fever or illness.",e:"The patient presented with a remittent fever that spiked each evening."},
+{w:"Prozvonit",p:"v.",d:"(Czech/Slovak slang) To call someone's phone and hang up before they answer, as a prearranged signal.",e:"She prozvonit'd him to let him know she'd arrived, saving them both the cost of a call."},
+{w:"Plonker",p:"n.",d:"(British informal) A foolish or stupid person.",e:"\"You absolute plonker,\" he laughed, \"you locked the keys inside.\""},
+{w:"Oeuvre",p:"n.",d:"The complete body of work of an artist, writer, or composer.",e:"The retrospective covered her entire oeuvre, from early sketches to final paintings."},
+{w:"Florid",p:"adj.",d:"Excessively elaborate or ornate, especially in style; or, flushed and ruddy.",e:"His florid prose style made the simplest update feel like an epic."},
+{w:"Ingenuity",p:"n.",d:"The quality of being cleverly inventive or resourceful.",e:"The team's ingenuity turned a broken part into a working fix overnight."},
+{w:"Raconteur",p:"n.",d:"A person who tells anecdotes in a skillful and amusing way.",e:"Her grandfather was a natural raconteur, with a story for every occasion."},
+{w:"Recapitulate",p:"v.",d:"To summarize the main points of something already discussed.",e:"Let me recapitulate the key findings before we move to the next slide."},
+{w:"Recalcitrant",p:"adj.",d:"Stubbornly resistant to authority or guidance.",e:"The recalcitrant committee member blocked every proposal for months."},
+{w:"Felicity",p:"n.",d:"Intense happiness; also, the ability to find appropriate expression for ideas.",e:"He described married life with real felicity in his memoir."},
+{w:"De rigueur",p:"adj.",d:"Required by current fashion, etiquette, or custom.",e:"Black tie was de rigueur at the embassy dinner."},
+{w:"Penury",p:"n.",d:"Extreme poverty; destitution.",e:"The family lived in penury after the factory closed."},
+{w:"Precocious",p:"adj.",d:"Showing abilities or maturity unusually early for one's age.",e:"Her precocious reading skills had her finishing novels in kindergarten."},
+{w:"Patripassianism",p:"n.",d:"An early theological doctrine holding that God the Father suffered alongside the Son on the cross.",e:"Patripassianism was condemned as heresy by the early church for blurring the persons of the Trinity."},
+{w:"Pilloried",p:"v.",d:"Publicly criticized or ridiculed; historically, punished in a pillory.",e:"The CEO was pilloried in the press for the botched product launch."},
+{w:"Filioque",p:"n.",d:"A Latin clause meaning 'and from the Son,' added to the Nicene Creed, historically a major point of dispute between Eastern and Western churches.",e:"The filioque clause remains a key theological divide between Catholic and Orthodox traditions."},
+{w:"Macerated",p:"v.",d:"Softened by soaking in liquid; or, broken down through prolonged soaking.",e:"The strawberries were macerated in sugar and lemon overnight."},
+{w:"Obviate",p:"v.",d:"To remove a need or difficulty in advance.",e:"Automating the report obviated the need for a weekly status meeting."},
+{w:"Eructation",p:"n.",d:"A belch.",e:"The geologist described the volcanic vent as a slow, ongoing eructation of gas."},
+{w:"Abrogate",p:"v.",d:"To repeal or do away with a law, right, or formal agreement.",e:"The new administration moved quickly to abrogate the previous trade agreement."},
+{w:"Scatological",p:"adj.",d:"Relating to excrement or obscene matters, especially in humor or literature.",e:"The comedian's scatological jokes weren't for everyone, but the crowd loved them."},
+{w:"Quod erat demonstrandum",p:"phrase",d:"Latin for 'which was to be demonstrated,' traditionally placed at the end of a mathematical proof (Q.E.D.).",e:"He underlined the final equation and wrote 'quod erat demonstrandum' beneath it."},
+{w:"C'est la guerre",p:"phrase",d:"French for 'such is war'; used to express resigned acceptance of an unfortunate situation.",e:"The flight got cancelled again — c'est la guerre, I suppose."},
+{w:"Conniption",p:"n.",d:"A fit of hysterical excitement or anger.",e:"He had a conniption when he realized the file hadn't saved."},
+{w:"Emollient",p:"n./adj.",d:"A substance that softens or soothes the skin; figuratively, something that soothes tension.",e:"Her calm, emollient tone defused the argument almost instantly."},
+{w:"Fedayeen",p:"n.",d:"Guerrilla fighters or commandos, especially in Middle Eastern contexts (Arabic in origin).",e:"The history covers the fedayeen's role in several mid-century conflicts."},
+{w:"Dithyrambic",p:"adj.",d:"Wildly enthusiastic or passionate, originally describing a frenzied Greek hymn to Dionysus.",e:"His dithyrambic toast went on for nearly twenty minutes."},
+{w:"Palaver",p:"n.",d:"Prolonged and pointless discussion; also, a parley or negotiation.",e:"After all that palaver, they ended up picking the first restaurant anyway."},
+{w:"Venial",p:"adj.",d:"Pardonable or minor, especially of a sin or fault.",e:"Forgetting to reply to one email is a venial offense at worst."},
+{w:"Impunity",p:"n.",d:"Exemption from punishment or consequences for one's actions.",e:"For years, the landlord ignored housing codes with impunity."},
+{w:"Officious",p:"adj.",d:"Excessively eager to assert authority or offer unwanted advice.",e:"The officious new hall monitor wrote up half the school in his first week."},
+{w:"Intransigent",p:"adj.",d:"Unwilling to change one's views or to compromise.",e:"Both sides remained intransigent through three rounds of talks."},
+{w:"Intractable",p:"adj.",d:"Hard to control or solve; stubbornly unmanageable.",e:"Homelessness remained an intractable problem despite the new funding."},
+{w:"Turgid",p:"adj.",d:"Swollen or distended; also, pompous or overblown in style.",e:"His turgid prose buried a simple idea under a hundred extra clauses."},
+{w:"Spate",p:"n.",d:"A large number of similar things happening in a short period.",e:"The town saw a spate of burglaries over the holiday weekend."},
+{w:"Portmanteau",p:"n.",d:"A word blending the sounds and meanings of two others; also, a large traveling case.",e:"'Brunch' is a portmanteau of 'breakfast' and 'lunch.'"},
+{w:"Alembicated",p:"adj.",d:"Excessively refined or elaborate, to the point of obscurity.",e:"The critic called the film's symbolism alembicated and exhausting."},
+{w:"Rime",p:"n.",d:"A coating of frost, especially on cold, foggy surfaces.",e:"Rime coated every branch in the forest after the freezing fog."},
+{w:"Leonine",p:"adj.",d:"Resembling a lion, especially in appearance or majesty.",e:"His leonine mane of grey hair made him hard to miss in a crowd."}
+];
+
+</script>
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------- storage helpers ---------------- */
+  const STORE_KEY = "vocab-data-v1";
+  let DATA = null; // { cards: [...], studyDays: {dateStr: count} }
+
+  function todayStr(d){
+    d = d || new Date();
+    const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,"0"), day = String(d.getDate()).padStart(2,"0");
+    return y+"-"+m+"-"+day;
+  }
+  function addDays(d, n){ const r = new Date(d); r.setDate(r.getDate()+n); return r; }
+  function uid(){ return "c"+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+
+  function freshData(){
+    const today = todayStr();
+    const cards = SEED_CARDS.map(function(s){
+      return { id: uid(), w: s.w, p: s.p, d: s.d, e: s.e, level: "unknown", dateAdded: today, masteredDate: null };
+    });
+    return { cards: cards, studyDays: {} };
+  }
+
+  async function loadData(){
+    try{
+      const res = await window.storage.get(STORE_KEY, false);
+      if(res && res.value){ DATA = JSON.parse(res.value); }
+      else { DATA = freshData(); await persist(); }
+    }catch(e){
+      DATA = freshData();
+      await persist();
+    }
+    if(!DATA.cards) DATA.cards = [];
+    if(!DATA.studyDays) DATA.studyDays = {};
+  }
+
+  let saving = false, pendingSave = false;
+  async function persist(){
+    if(saving){ pendingSave = true; return; }
+    saving = true;
+    try{
+      await window.storage.set(STORE_KEY, JSON.stringify(DATA), false);
+    }catch(e){ console.error("save failed", e); }
+    saving = false;
+    if(pendingSave){ pendingSave = false; persist(); }
+  }
+
+  function showToast(msg){
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(t._timer);
+    t._timer = setTimeout(function(){ t.classList.remove("show"); }, 1800);
+  }
+
+  /* ---------------- app state ---------------- */
+  const state = {
+    page: "study",          // study | library | metrics
+    session: null,          // { queue:[ids], idx, flipped, results:{known,unsure,unknown} }
+    setup: { scope: "all", countMode: "all", count: 20 },
+    lib: { search: "", showAdd: false, expanded: null }
+  };
+
+  function cardsByScope(scope){
+    if(scope === "review") return DATA.cards.filter(function(c){ return c.level !== "known"; });
+    return DATA.cards.slice();
+  }
+  function shuffle(arr){
+    const a = arr.slice();
+    for(let i=a.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); const t=a[i]; a[i]=a[j]; a[j]=t; }
+    return a;
+  }
+
+  /* ---------------- render: tabs ---------------- */
+  function renderTabs(){
+    const tabs = [["study","Study"],["library","Library"],["metrics","Metrics"]];
+    const el = document.getElementById("tabs");
+    el.innerHTML = tabs.map(function(t){
+      const active = state.page === t[0] ? " active" : "";
+      return '<button class="drawer-tab'+active+'" data-tab="'+t[0]+'"><span class="pull"></span>'+t[1]+'</button>';
+    }).join("");
+    Array.prototype.forEach.call(el.querySelectorAll(".drawer-tab"), function(btn){
+      btn.addEventListener("click", function(){
+        state.page = btn.getAttribute("data-tab");
+        if(state.page !== "study"){ /* leaving study tab keeps session paused in place */ }
+        render();
+      });
+    });
+  }
+
+  /* ================= STUDY: SETUP ================= */
+  function renderSetup(){
+    const all = DATA.cards;
+    const reviewPool = cardsByScope("review");
+    const scope = state.setup.scope;
+    const pool = cardsByScope(scope);
+    const maxCount = pool.length;
+    if(state.setup.count > maxCount) state.setup.count = Math.max(1, maxCount);
+
+    let html = '';
+    html += '<h2 class="display" style="margin-top:0;font-size:1.4rem;">Choose your set</h2>';
+    html += '<div class="choice-group">';
+    html += choiceCard("scope","all", scope==="all", "All words", all.length+" cards in the lexicon");
+    html += choiceCard("scope","review", scope==="review", "Unsure &amp; unknown only", reviewPool.length+" cards still need work", reviewPool.length===0);
+    html += '</div>';
+
+    html += '<h2 class="display" style="font-size:1.4rem;">How many cards?</h2>';
+    html += '<div class="count-row">';
+    html += '<input class="input" type="number" min="1" max="'+Math.max(1,maxCount)+'" value="'+state.setup.count+'" id="count-input" '+(state.setup.countMode==="all"?"disabled":"")+'>';
+    html += '<button class="toggle-all'+(state.setup.countMode==="all"?" active":"")+'" id="toggle-all-btn">All ('+maxCount+')</button>';
+    html += '</div>';
+
+    if(pool.length === 0){
+      html += '<div class="empty-note">Nothing to review here yet — every card in this set is already marked Known. Try studying "All words," or come back after marking a few Unsure.</div>';
+    } else {
+      const goCount = state.setup.countMode==="all" ? maxCount : Math.min(state.setup.count, maxCount);
+      html += '<button class="btn btn-primary btn-block" id="begin-btn">Begin study session — '+goCount+' card'+(goCount===1?'':'s')+'</button>';
+    }
+
+    document.getElementById("page").innerHTML = html;
+
+    Array.prototype.forEach.call(document.querySelectorAll('input[name="scope"]'), function(r){
+      r.addEventListener("change", function(){ state.setup.scope = r.value; renderSetup(); });
+    });
+    const ci = document.getElementById("count-input");
+    if(ci) ci.addEventListener("input", function(){ state.setup.count = Math.max(1, parseInt(ci.value||"1",10)); });
+    const tb = document.getElementById("toggle-all-btn");
+    if(tb) tb.addEventListener("click", function(){
+      state.setup.countMode = state.setup.countMode === "all" ? "number" : "all";
+      renderSetup();
+    });
+    const bb = document.getElementById("begin-btn");
+    if(bb) bb.addEventListener("click", startSession);
+  }
+
+  function choiceCard(name, value, checked, title, desc, disabled){
+    return '<label class="choice-card'+(checked?" selected":"")+(disabled?" disabled":"")+'">'+
+      '<input type="radio" name="'+name+'" value="'+value+'" '+(checked?"checked":"")+(disabled?" disabled":"")+'>'+
+      '<div><div class="ct">'+title+'</div><div class="cd">'+desc+'</div></div></label>';
+  }
+
+  function startSession(){
+    const scope = state.setup.scope;
+    let pool = shuffle(cardsByScope(scope));
+    const n = state.setup.countMode === "all" ? pool.length : Math.min(state.setup.count, pool.length);
+    pool = pool.slice(0, n);
+    state.session = {
+      queue: pool.map(function(c){return c.id;}),
+      idx: 0,
+      flipped: false,
+      results: { known:0, unsure:0, unknown:0 },
+      total: pool.length
+    };
+    render();
+  }
+
+  /* ================= STUDY: SESSION ================= */
+  function currentSessionCard(){
+    const s = state.session;
+    const id = s.queue[s.idx];
+    return DATA.cards.find(function(c){ return c.id === id; });
+  }
+
+  function renderSession(){
+    const s = state.session;
+    if(s.idx >= s.total){ return renderSummary(); }
+    const card = currentSessionCard();
+    const pct = Math.round((s.idx / s.total) * 100);
+
+    let html = '';
+    html += '<div class="session-head"><span class="mono">card '+(s.idx+1)+' / '+s.total+'</span>'+
+            '<span class="mono">'+streakTodayLabel()+'</span></div>';
+    html += '<div class="progress-bar"><div class="progress-fill" style="width:'+pct+'%"></div></div>';
+
+    html += '<div class="flip-stage"><div class="flip-card'+(s.flipped?" flipped":"")+'" id="flip-card">'+
+      '<div class="flip-inner">'+
+        '<div class="face face-front">'+
+          '<span class="face-tab">'+escapeHtml(card.p||"")+'</span>'+
+          '<div class="face-word">'+escapeHtml(card.w)+'</div>'+
+          '<div class="face-hint">tap to reveal</div>'+
+        '</div>'+
+        '<div class="face face-back">'+
+          '<span class="face-tab">'+escapeHtml(card.p||"")+'</span>'+
+          '<div class="face-def">'+escapeHtml(card.d)+'</div>'+
+          (card.e ? '<div class="face-ex">'+escapeHtml(card.e)+'</div>' : '')+
+        '</div>'+
+      '</div></div></div>';
+
+    const disabled = s.flipped ? "" : "disabled";
+    html += '<div class="rate-row">'+
+      '<button class="rate-btn rate-unknown" data-level="unknown" '+disabled+'>Unknown</button>'+
+      '<button class="rate-btn rate-unsure" data-level="unsure" '+disabled+'>Unsure</button>'+
+      '<button class="rate-btn rate-known" data-level="known" '+disabled+'>Known</button>'+
+      '</div>';
+
+    document.getElementById("page").innerHTML = html;
+
+    const fc = document.getElementById("flip-card");
+    fc.addEventListener("click", function(){
+      s.flipped = !s.flipped;
+      renderSession();
+    });
+    Array.prototype.forEach.call(document.querySelectorAll(".rate-btn"), function(btn){
+      btn.addEventListener("click", function(ev){
+        ev.stopPropagation();
+        rateCurrent(btn.getAttribute("data-level"));
+      });
+    });
+  }
+
+  function streakTodayLabel(){
+    const t = todayStr();
+    const n = DATA.studyDays[t] || 0;
+    return n + " reviewed today";
+  }
+
+  function rateCurrent(level){
+    const s = state.session;
+    const card = currentSessionCard();
+    card.level = level;
+    if(level === "known" && !card.masteredDate){ card.masteredDate = todayStr(); }
+    s.results[level] = (s.results[level]||0) + 1;
+    const t = todayStr();
+    DATA.studyDays[t] = (DATA.studyDays[t]||0) + 1;
+    persist();
+    s.idx += 1;
+    s.flipped = false;
+    render();
+  }
+
+  function renderSummary(){
+    const s = state.session;
+    let html = '<div class="session-summary">';
+    html += '<div class="section-title">Session complete</div>';
+    html += '<div class="big">'+s.total+'</div>';
+    html += '<div style="color:var(--ink-soft);font-size:0.9rem;margin-top:-6px;">card'+(s.total===1?'':'s')+' reviewed</div>';
+    html += '<div class="summary-stats">'+
+      statBlock(s.results.known, "Known", "var(--known)")+
+      statBlock(s.results.unsure, "Unsure", "var(--unsure)")+
+      statBlock(s.results.unknown, "Unknown", "var(--unknown)")+
+      '</div>';
+    html += '<div class="summary-actions">'+
+      '<button class="btn btn-brass" id="again-btn">Study again</button>'+
+      '<button class="btn btn-ghost" id="setup-btn">Back to setup</button>'+
+      '</div>';
+    html += '</div>';
+    document.getElementById("page").innerHTML = html;
+    document.getElementById("again-btn").addEventListener("click", function(){ state.session=null; startSession(); });
+    document.getElementById("setup-btn").addEventListener("click", function(){ state.session=null; render(); });
+  }
+  function statBlock(n, label, color){
+    return '<div><div class="n" style="color:'+color+'">'+n+'</div><div class="l">'+label+'</div></div>';
+  }
+
+  function renderStudyPage(){
+    if(state.session && state.session.idx < (state.session.total||0)+1){
+      renderSession();
+    } else {
+      renderSetup();
+    }
+  }
+
+  /* ================= LIBRARY ================= */
+  function renderLibrary(){
+    const q = state.lib.search.trim().toLowerCase();
+    let cards = DATA.cards.slice().sort(function(a,b){ return a.w.localeCompare(b.w); });
+    if(q){
+      cards = cards.filter(function(c){
+        return c.w.toLowerCase().indexOf(q)>-1 || c.d.toLowerCase().indexOf(q)>-1;
+      });
+    }
+
+    let html = '';
+    html += '<div class="lib-toolbar">'+
+      '<input class="input" id="lib-search" placeholder="Search words or definitions…" value="'+escapeAttr(state.lib.search)+'">'+
+      '<button class="btn btn-brass btn-sm" id="lib-add-toggle">'+(state.lib.showAdd?"Cancel":"+ Add card")+'</button>'+
+      '</div>';
+
+    if(state.lib.showAdd){
+      html += '<div class="add-form"><div class="section-title">New card</div>'+
+        '<div class="add-form-grid">'+
+        '<div class="field"><label class="field-label">Word</label><input class="input" id="new-w"></div>'+
+        '<div class="field"><label class="field-label">Part of speech</label><input class="input" id="new-p" placeholder="e.g. adj., n., v."></div>'+
+        '<div class="field full"><label class="field-label">Definition</label><textarea class="input" id="new-d"></textarea></div>'+
+        '<div class="field full"><label class="field-label">Example sentence</label><textarea class="input" id="new-e"></textarea></div>'+
+        '</div>'+
+        '<button class="btn btn-primary" id="save-new-btn">Save card</button>'+
+        '</div>';
+    }
+
+    html += '<div class="lib-count">'+cards.length+' card'+(cards.length===1?'':'s')+(q?' matching “'+escapeHtml(state.lib.search)+'”':'')+'</div>';
+    html += '<div id="card-rows">';
+    if(cards.length === 0){
+      html += '<div class="empty-note">No cards match that search.</div>';
+    }
+    cards.forEach(function(c){
+      const pillClass = c.level==="known"?"pill-known":(c.level==="unsure"?"pill-unsure":"pill-unknown");
+      const expanded = state.lib.expanded === c.id;
+      html += '<div class="card-row'+(expanded?" expanded":"")+'" data-id="'+c.id+'">'+
+        '<div class="card-row-top">'+
+          '<div><span class="card-row-word">'+escapeHtml(c.w)+'</span><span class="card-row-pos">'+escapeHtml(c.p||"")+'</span></div>'+
+          '<span class="level-pill '+pillClass+'">'+c.level+'</span>'+
+        '</div>'+
+        '<div class="card-row-detail">'+escapeHtml(c.d)+(c.e?'<div class="ex">'+escapeHtml(c.e)+'</div>':'')+
+          '<div class="card-row-actions"><button class="btn btn-ghost btn-sm" data-del="'+c.id+'">Delete card</button></div>'+
+        '</div>'+
+      '</div>';
+    });
+    html += '</div>';
+
+    document.getElementById("page").innerHTML = html;
+
+    document.getElementById("lib-search").addEventListener("input", function(e){
+      state.lib.search = e.target.value; renderLibrary();
+    });
+    document.getElementById("lib-add-toggle").addEventListener("click", function(){
+      state.lib.showAdd = !state.lib.showAdd; renderLibrary();
+    });
+    const saveBtn = document.getElementById("save-new-btn");
+    if(saveBtn) saveBtn.addEventListener("click", function(){
+      const w = document.getElementById("new-w").value.trim();
+      const p = document.getElementById("new-p").value.trim();
+      const d = document.getElementById("new-d").value.trim();
+      const e = document.getElementById("new-e").value.trim();
+      if(!w || !d){ showToast("Word and definition are required"); return; }
+      DATA.cards.push({ id: uid(), w:w, p:p, d:d, e:e, level:"unknown", dateAdded: todayStr(), masteredDate: null });
+      persist();
+      state.lib.showAdd = false;
+      showToast("Card added: "+w);
+      renderLibrary();
+    });
+    Array.prototype.forEach.call(document.querySelectorAll(".card-row"), function(row){
+      row.addEventListener("click", function(e){
+        if(e.target.closest("[data-del]")) return;
+        const id = row.getAttribute("data-id");
+        state.lib.expanded = state.lib.expanded === id ? null : id;
+        renderLibrary();
+      });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-del]"), function(btn){
+      btn.addEventListener("click", function(e){
+        e.stopPropagation();
+        const id = btn.getAttribute("data-del");
+        const card = DATA.cards.find(function(c){return c.id===id;});
+        DATA.cards = DATA.cards.filter(function(c){ return c.id !== id; });
+        persist();
+        showToast("Deleted: "+(card?card.w:""));
+        renderLibrary();
+      });
+    });
+  }
+
+  /* ================= METRICS ================= */
+  function dateRangeArray(days){
+    const out = [];
+    const today = new Date();
+    for(let i=days-1;i>=0;i--){ out.push(todayStr(addDays(today,-i))); }
+    return out;
+  }
+
+  function computeStreaks(){
+    const days = Object.keys(DATA.studyDays).filter(function(k){ return DATA.studyDays[k]>0; }).sort();
+    if(days.length===0) return { current:0, longest:0 };
+    const daySet = new Set(days);
+    // current streak: count back from today if studied today, otherwise from yesterday
+    // (a streak stays "alive" until a full day passes with no activity)
+    let anchor = daySet.has(todayStr()) ? new Date() : addDays(new Date(), -1);
+    let current = 0;
+    let cursor = anchor;
+    while(daySet.has(todayStr(cursor))){ current++; cursor = addDays(cursor,-1); }
+    // longest streak: scan all studied days for the longest consecutive run
+    let longest = 0, run = 0, prev = null;
+    days.forEach(function(d){
+      if(prev){
+        const prevDate = new Date(prev+"T00:00:00");
+        const expected = todayStr(addDays(prevDate,1));
+        run = (expected===d) ? run+1 : 1;
+      } else { run = 1; }
+      longest = Math.max(longest, run);
+      prev = d;
+    });
+    return { current: current, longest: longest };
+  }
+
+  function renderMetrics(){
+    const cards = DATA.cards;
+    const known = cards.filter(function(c){return c.level==="known";}).length;
+    const unsure = cards.filter(function(c){return c.level==="unsure";}).length;
+    const unknown = cards.filter(function(c){return c.level==="unknown";}).length;
+    const totalReviews = Object.values(DATA.studyDays).reduce(function(a,b){return a+b;},0);
+    const streaks = computeStreaks();
+
+    let html = '';
+    html += '<h2 class="display" style="margin-top:0;font-size:1.4rem;">Your progress</h2>';
+    html += '<div class="metric-grid">'+
+      metricBox(streaks.current, "Day streak")+
+      metricBox(streaks.longest, "Longest streak")+
+      metricBox(totalReviews, "Total reviews")+
+      metricBox(known, "Words known")+
+      metricBox(cards.length, "Cards filed")+
+      metricBox(Object.keys(DATA.studyDays).length, "Days studied")+
+      '</div>';
+
+    html += '<div class="section-title">Study calendar — last 18 weeks</div>';
+    html += renderHeatmap();
+    html += '<hr class="hr">';
+
+    html += '<div class="section-title">Where every card stands</div>';
+    const tot = Math.max(1, cards.length);
+    html += barRow("Known", known, tot, "var(--known)");
+    html += barRow("Unsure", unsure, tot, "var(--unsure)");
+    html += barRow("Unknown", unknown, tot, "var(--unknown)");
+    html += '<hr class="hr">';
+
+    html += '<div class="section-title">Words mastered over time</div>';
+    html += renderMasteryChart();
+
+    document.getElementById("page").innerHTML = html;
+  }
+
+  function metricBox(n, label){
+    return '<div class="metric-box"><div class="n">'+n+'</div><div class="l">'+label+'</div></div>';
+  }
+  function barRow(label, n, tot, color){
+    const pct = Math.round((n/tot)*100);
+    return '<div class="bar-row"><div class="lbl">'+label+'</div>'+
+      '<div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:'+color+'"></div></div>'+
+      '<div class="val">'+n+'</div></div>';
+  }
+
+  function renderHeatmap(){
+    const days = dateRangeArray(126); // 18 weeks
+    // pad to start on Sunday
+    const first = new Date(days[0]+"T00:00:00");
+    const pad = first.getDay();
+    const cells = [];
+    for(let i=0;i<pad;i++) cells.push(null);
+    days.forEach(function(d){ cells.push(d); });
+    function colorFor(d){
+      if(d===null) return "transparent";
+      const n = DATA.studyDays[d] || 0;
+      if(n===0) return "var(--rule)";
+      if(n<3) return "#b9cdbd";
+      if(n<6) return "#6f9c80";
+      if(n<12) return "#356b4c";
+      return "var(--library-deep)";
+    }
+    let html = '<div class="heat-wrap"><div class="heat-grid">';
+    cells.forEach(function(d){
+      const title = d ? (d+": "+(DATA.studyDays[d]||0)+" reviewed") : "";
+      html += '<div class="heat-cell" title="'+title+'" style="background:'+colorFor(d)+'"></div>';
+    });
+    html += '</div></div>';
+    html += '<div class="heat-legend">less '+
+      '<span class="heat-cell" style="background:var(--rule)"></span>'+
+      '<span class="heat-cell" style="background:#b9cdbd"></span>'+
+      '<span class="heat-cell" style="background:#6f9c80"></span>'+
+      '<span class="heat-cell" style="background:#356b4c"></span>'+
+      '<span class="heat-cell" style="background:var(--library-deep)"></span> more</div>';
+    return html;
+  }
+
+  function renderMasteryChart(){
+    const dated = DATA.cards.filter(function(c){ return c.masteredDate; })
+      .map(function(c){ return c.masteredDate; }).sort();
+    if(dated.length < 2){
+      return '<div class="chart-empty">Keep studying — once you have marked a couple of words Known, your mastery trend will show up here.</div>';
+    }
+    const counts = {};
+    dated.forEach(function(d){ counts[d] = (counts[d]||0)+1; });
+    const uniqueDates = Object.keys(counts).sort();
+    let running = 0;
+    const points = uniqueDates.map(function(d){ running += counts[d]; return {d:d, total:running}; });
+    const max = points[points.length-1].total;
+    const W = 640, H = 160, padL = 30, padB = 24, padT = 10, padR = 10;
+    const plotW = W - padL - padR, plotH = H - padT - padB;
+    const xStep = points.length>1 ? plotW/(points.length-1) : 0;
+    const coords = points.map(function(pt,i){
+      const x = padL + i*xStep;
+      const y = padT + plotH - (pt.total/max)*plotH;
+      return [x,y];
+    });
+    const linePath = coords.map(function(c,i){ return (i===0?"M":"L")+c[0].toFixed(1)+","+c[1].toFixed(1); }).join(" ");
+    const areaPath = linePath + " L"+coords[coords.length-1][0].toFixed(1)+","+(padT+plotH)+
+      " L"+coords[0][0].toFixed(1)+","+(padT+plotH)+" Z";
+    let svg = '<svg viewBox="0 0 '+W+' '+H+'" width="100%" height="'+H+'" preserveAspectRatio="xMidYMid meet">';
+    svg += '<line x1="'+padL+'" y1="'+(padT+plotH)+'" x2="'+(W-padR)+'" y2="'+(padT+plotH)+'" stroke="var(--rule-strong)" stroke-width="1"/>';
+    svg += '<path d="'+areaPath+'" fill="var(--known)" opacity="0.14"/>';
+    svg += '<path d="'+linePath+'" fill="none" stroke="var(--known)" stroke-width="2.5"/>';
+    coords.forEach(function(c){ svg += '<circle cx="'+c[0].toFixed(1)+'" cy="'+c[1].toFixed(1)+'" r="3" fill="var(--known)"/>'; });
+    svg += '<text x="'+padL+'" y="'+(H-6)+'" font-size="10" fill="var(--ink-soft)" font-family="JetBrains Mono, monospace">'+uniqueDates[0]+'</text>';
+    svg += '<text x="'+(W-padR)+'" y="'+(H-6)+'" font-size="10" fill="var(--ink-soft)" font-family="JetBrains Mono, monospace" text-anchor="end">'+uniqueDates[uniqueDates.length-1]+'</text>';
+    svg += '<text x="'+padL+'" y="'+(padT+10)+'" font-size="11" fill="var(--library-deep)" font-family="JetBrains Mono, monospace" font-weight="600">'+max+' known</text>';
+    svg += '</svg>';
+    return svg;
+  }
+
+  /* ---------------- util ---------------- */
+  function escapeHtml(s){
+    return String(s==null?"":s).replace(/[&<>"']/g, function(c){
+      return ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c];
+    });
+  }
+  function escapeAttr(s){ return escapeHtml(s); }
+
+  /* ---------------- master render ---------------- */
+  function render(){
+    renderTabs();
+    if(state.page === "study") renderStudyPage();
+    else if(state.page === "library") renderLibrary();
+    else if(state.page === "metrics") renderMetrics();
+  }
+
+  /* ---------------- init ---------------- */
+  loadData().then(render);
+})();
+</script>
+</body>
+</html>
