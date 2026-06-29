@@ -66,6 +66,15 @@
     text-transform: uppercase;
     color: var(--ink-soft);
   }
+  .version-tag{
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.62rem;
+    font-weight: 500;
+    color: var(--ink-soft);
+    vertical-align: super;
+    margin-left: 6px;
+    letter-spacing: 0.02em;
+  }
 
   /* ---------- Drawer tab nav ---------- */
   .drawer-tabs{
@@ -117,6 +126,7 @@
     transition: transform .08s ease, filter .15s ease, opacity .15s ease;
   }
   .btn:active{ transform: scale(0.98); }
+  .btn:disabled{ opacity: 0.35; cursor: not-allowed; transform:none; }
   .btn-primary{ background: var(--library); color: var(--card); }
   .btn-primary:hover{ filter: brightness(1.12); }
   .btn-primary:disabled{ opacity: 0.4; cursor: not-allowed; }
@@ -126,6 +136,13 @@
   .btn-ghost:hover{ background: rgba(42,36,28,0.05); }
   .btn-block{ width: 100%; }
   .btn-sm{ padding: 8px 14px; font-size: 0.82rem; }
+
+  .nav-row{ display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px; gap:8px; }
+  .nav-row .mono{ font-size: 0.72rem; color: var(--ink-soft); }
+  .prev-rating-note{
+    text-align:center; font-size:0.76rem; color: var(--ink-soft); margin: 10px 0 0; font-style: italic;
+  }
+  .rate-btn.was-picked{ box-shadow: 0 0 0 3px rgba(42,36,28,0.25) inset; }
 
   /* ---------- Form bits ---------- */
   label.field-label{
@@ -362,7 +379,7 @@
 <body>
 <div class="shell">
   <div class="masthead">
-    <h1 class="display">LexiPal</h1>
+    <h1 class="display">LexiPal<span class="version-tag" id="version-tag"></span></h1>
     <p class="sub" id="masthead-sub">a working vocabulary, filed by hand</p>
   </div>
 
@@ -719,6 +736,16 @@ const SEED_CARDS = [
 <script>
 (function(){
   "use strict";
+
+  /* ---------------- app version ----------------
+     Bump this with every update that ships:
+       PATCH (1.0.x) — bug fixes, no behavior/UI change
+       MINOR (1.x.0) — new features, backward-compatible
+       MAJOR (x.0.0) — breaking changes to data shape or core flows
+  */
+  const APP_VERSION = "1.1.0";
+  const versionEl = document.getElementById("version-tag");
+  if(versionEl) versionEl.textContent = "v" + APP_VERSION;
 
   /* ---------------- config: Google sign-in + Drive sync ---------------- */
   const GOOGLE_CLIENT_ID = "637244980580-bh6apbuee0upq3mam0pad0mna4gal8oc.apps.googleusercontent.com";
@@ -1128,9 +1155,9 @@ const SEED_CARDS = [
     state.session = {
       queue: pool.map(function(c){return c.id;}),
       sides: sides,
+      ratings: {},   // idx -> 'known' | 'unsure' | 'unknown', only set once a card has been rated
       idx: 0,
       flipped: false,
-      results: { known:0, unsure:0, unknown:0 },
       total: pool.length
     };
     render();
@@ -1149,12 +1176,17 @@ const SEED_CARDS = [
     const card = currentSessionCard();
     const pct = Math.round((s.idx / s.total) * 100);
     const defFirst = s.sides[s.idx] === "back";
+    const priorRating = s.ratings[s.idx];
 
     let html = '';
     html += '<div class="session-head"><span class="mono">card '+(s.idx+1)+' / '+s.total+'</span>'+
             '<button class="btn btn-ghost btn-sm" id="stop-session-btn">End session</button></div>';
     html += '<div class="progress-bar"><div class="progress-fill" style="width:'+pct+'%"></div></div>';
-    html += '<div class="mono" style="text-align:center;font-size:0.72rem;color:var(--ink-soft);margin:-16px 0 18px;">'+streakTodayLabel()+'</div>';
+    html += '<div class="nav-row">'+
+      '<button class="btn btn-ghost btn-sm" id="nav-back-btn" '+(s.idx===0?"disabled":"")+'>\u2039 Back</button>'+
+      '<span class="mono">'+streakTodayLabel()+'</span>'+
+      '<button class="btn btn-ghost btn-sm" id="nav-forward-btn" '+(s.idx>=s.total-1?"disabled":"")+'>Forward \u203a</button>'+
+      '</div>';
 
     const wordFace = faceWordHtml(card, defFirst ? "tap to reveal word" : "tap to reveal definition");
     const defFace = faceDefHtml(card, "tap to flip back");
@@ -1171,10 +1203,13 @@ const SEED_CARDS = [
 
     const disabled = s.flipped ? "" : "disabled";
     html += '<div class="rate-row">'+
-      '<button class="rate-btn rate-unknown" data-level="unknown" '+disabled+'>Unknown</button>'+
-      '<button class="rate-btn rate-unsure" data-level="unsure" '+disabled+'>Unsure</button>'+
-      '<button class="rate-btn rate-known" data-level="known" '+disabled+'>Known</button>'+
+      '<button class="rate-btn rate-unknown'+(priorRating==="unknown"?" was-picked":"")+'" data-level="unknown" '+disabled+'>Unknown</button>'+
+      '<button class="rate-btn rate-unsure'+(priorRating==="unsure"?" was-picked":"")+'" data-level="unsure" '+disabled+'>Unsure</button>'+
+      '<button class="rate-btn rate-known'+(priorRating==="known"?" was-picked":"")+'" data-level="known" '+disabled+'>Known</button>'+
       '</div>';
+    if(priorRating){
+      html += '<div class="prev-rating-note">You marked this '+priorRating+' earlier this session — re-rate it, or use Back/Forward to move on.</div>';
+    }
 
     document.getElementById("page").innerHTML = html;
 
@@ -1197,6 +1232,14 @@ const SEED_CARDS = [
     document.getElementById("stop-session-btn").addEventListener("click", function(){
       state.session = null;
       render();
+    });
+    const backBtn = document.getElementById("nav-back-btn");
+    if(backBtn) backBtn.addEventListener("click", function(){
+      if(s.idx > 0){ s.idx -= 1; s.flipped = false; renderSession(); }
+    });
+    const fwdBtn = document.getElementById("nav-forward-btn");
+    if(fwdBtn) fwdBtn.addEventListener("click", function(){
+      if(s.idx < s.total - 1){ s.idx += 1; s.flipped = false; renderSession(); }
     });
   }
 
@@ -1223,9 +1266,12 @@ const SEED_CARDS = [
     const card = currentSessionCard();
     card.level = level;
     if(level === "known" && !card.masteredDate){ card.masteredDate = todayStr(); }
-    s.results[level] = (s.results[level]||0) + 1;
-    const t = todayStr();
-    DATA.studyDays[t] = (DATA.studyDays[t]||0) + 1;
+    const alreadyRatedThisSession = Object.prototype.hasOwnProperty.call(s.ratings, s.idx);
+    s.ratings[s.idx] = level;
+    if(!alreadyRatedThisSession){
+      const t = todayStr();
+      DATA.studyDays[t] = (DATA.studyDays[t]||0) + 1;
+    }
     persist();
     s.idx += 1;
     s.flipped = false;
@@ -1234,14 +1280,17 @@ const SEED_CARDS = [
 
   function renderSummary(){
     const s = state.session;
+    const tallies = { known:0, unsure:0, unknown:0 };
+    Object.keys(s.ratings).forEach(function(idx){ tallies[s.ratings[idx]]++; });
+    const ratedCount = Object.keys(s.ratings).length;
     let html = '<div class="session-summary">';
     html += '<div class="section-title">Session complete</div>';
-    html += '<div class="big">'+s.total+'</div>';
-    html += '<div style="color:var(--ink-soft);font-size:0.9rem;margin-top:-6px;">card'+(s.total===1?'':'s')+' reviewed</div>';
+    html += '<div class="big">'+ratedCount+'</div>';
+    html += '<div style="color:var(--ink-soft);font-size:0.9rem;margin-top:-6px;">of '+s.total+' card'+(s.total===1?'':'s')+' rated</div>';
     html += '<div class="summary-stats">'+
-      statBlock(s.results.known, "Known", "var(--known)")+
-      statBlock(s.results.unsure, "Unsure", "var(--unsure)")+
-      statBlock(s.results.unknown, "Unknown", "var(--unknown)")+
+      statBlock(tallies.known, "Known", "var(--known)")+
+      statBlock(tallies.unsure, "Unsure", "var(--unsure)")+
+      statBlock(tallies.unknown, "Unknown", "var(--unknown)")+
       '</div>';
     html += '<div class="summary-actions">'+
       '<button class="btn btn-brass" id="again-btn">Study again</button>'+
