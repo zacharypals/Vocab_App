@@ -157,18 +157,21 @@
   }
   textarea.input{ resize: vertical; min-height: 64px; }
 
-  /* ---------- Choice cards (study setup) ---------- */
-  .choice-group{ display:flex; flex-direction:column; gap:10px; margin-bottom: 22px; }
-  .choice-card{
-    display:flex; align-items:center; gap:12px;
-    border: 1px solid var(--rule-strong); border-radius: 8px; padding: 14px 16px;
+  /* ---------- Choice tiles (study setup: set scope) ---------- */
+  .choice-grid{
+    display:grid; grid-template-columns: repeat(2, 1fr); gap:8px; margin-bottom: 22px;
+  }
+  @media (min-width: 480px){ .choice-grid{ grid-template-columns: repeat(3, 1fr); } }
+  .choice-tile{
+    position:relative; display:block; text-align:center; cursor:pointer;
+    border: 1px solid var(--rule-strong); border-radius: 8px; padding: 10px 6px;
     background: #fffdf7; transition: border-color .15s, background .15s;
   }
-  .choice-card.selected{ border-color: var(--brass); background: #fbf2dc; }
-  .choice-card input{ width:18px; height:18px; accent-color: var(--brass); flex-shrink:0; }
-  .choice-card .ct{ font-weight:600; }
-  .choice-card .cd{ font-size:0.82rem; color: var(--ink-soft); margin-top:2px; }
-  .choice-card.disabled{ opacity:0.45; }
+  .choice-tile input{ position:absolute; opacity:0; pointer-events:none; }
+  .choice-tile.selected{ border-color: var(--brass); background: #fbf2dc; }
+  .choice-tile .ct{ font-weight:600; font-size:0.82rem; line-height:1.25; }
+  .choice-tile .cd{ font-size:0.66rem; color: var(--ink-soft); margin-top:3px; }
+  .choice-tile.disabled{ opacity:0.45; }
 
   .side-row{ display:flex; gap:8px; margin-bottom: 22px; }
   .side-choice{
@@ -744,7 +747,7 @@ const SEED_CARDS = [
        MINOR (1.x.0) — new features, backward-compatible
        MAJOR (x.0.0) — breaking changes to data shape or core flows
   */
-  const APP_VERSION = "1.1.1";
+  const APP_VERSION = "1.2.0";
   const versionEl = document.getElementById("version-tag");
   if(versionEl) versionEl.textContent = "v" + APP_VERSION;
 
@@ -1047,6 +1050,9 @@ const SEED_CARDS = [
 
   function cardsByScope(scope){
     if(scope === "review") return DATA.cards.filter(function(c){ return c.level !== "known"; });
+    if(scope === "unknown") return DATA.cards.filter(function(c){ return c.level === "unknown"; });
+    if(scope === "unsure") return DATA.cards.filter(function(c){ return c.level === "unsure"; });
+    if(scope === "known") return DATA.cards.filter(function(c){ return c.level === "known"; });
     if(scope === "favorites") return DATA.cards.filter(function(c){ return c.fav; });
     return DATA.cards.slice();
   }
@@ -1076,19 +1082,26 @@ const SEED_CARDS = [
   /* ================= STUDY: SETUP ================= */
   function renderSetup(){
     const all = DATA.cards;
-    const reviewPool = cardsByScope("review");
-    const favPool = cardsByScope("favorites");
     const scope = state.setup.scope;
     const pool = cardsByScope(scope);
     const maxCount = pool.length;
     if(state.setup.count > maxCount) state.setup.count = Math.max(1, maxCount);
 
+    const scopeOptions = [
+      ["all", "All", all.length],
+      ["review", "Unknown & Unsure", cardsByScope("review").length],
+      ["unknown", "Unknown Only", cardsByScope("unknown").length],
+      ["unsure", "Unsure Only", cardsByScope("unsure").length],
+      ["known", "Known Only", cardsByScope("known").length],
+      ["favorites", "Favorites \u2605", cardsByScope("favorites").length]
+    ];
+
     let html = '';
     html += '<h2 class="display" style="margin-top:0;font-size:1.4rem;">Choose your set</h2>';
-    html += '<div class="choice-group">';
-    html += choiceCard("scope","all", scope==="all", "All words", all.length+" cards in the lexicon");
-    html += choiceCard("scope","review", scope==="review", "Unsure &amp; unknown only", reviewPool.length+" cards still need work", reviewPool.length===0);
-    html += choiceCard("scope","favorites", scope==="favorites", "Favorites \u2605", favPool.length+" starred card"+(favPool.length===1?"":"s"), favPool.length===0);
+    html += '<div class="choice-grid">';
+    scopeOptions.forEach(function(opt){
+      html += choiceTile("scope", opt[0], scope===opt[0], opt[1], opt[2]+" card"+(opt[2]===1?"":"s"), opt[2]===0);
+    });
     html += '</div>';
 
     html += '<h2 class="display" style="font-size:1.4rem;">Which side comes up first?</h2>';
@@ -1105,7 +1118,7 @@ const SEED_CARDS = [
     html += '</div>';
 
     if(pool.length === 0){
-      html += '<div class="empty-note">Nothing to study in this set yet. Try "All words," mark a few cards Unsure, or star some Favorites.</div>';
+      html += '<div class="empty-note">Nothing to study in this set yet. Try "All," mark a few cards Unsure, or star some Favorites.</div>';
     } else {
       const goCount = state.setup.countMode==="all" ? maxCount : Math.min(state.setup.count, maxCount);
       html += '<button class="btn btn-primary btn-block" id="begin-btn">Begin study session — '+goCount+' card'+(goCount===1?'':'s')+'</button>';
@@ -1130,10 +1143,10 @@ const SEED_CARDS = [
     if(bb) bb.addEventListener("click", startSession);
   }
 
-  function choiceCard(name, value, checked, title, desc, disabled){
-    return '<label class="choice-card'+(checked?" selected":"")+(disabled?" disabled":"")+'">'+
+  function choiceTile(name, value, checked, title, desc, disabled){
+    return '<label class="choice-tile'+(checked?" selected":"")+(disabled?" disabled":"")+'">'+
       '<input type="radio" name="'+name+'" value="'+value+'" '+(checked?"checked":"")+(disabled?" disabled":"")+'>'+
-      '<div><div class="ct">'+title+'</div><div class="cd">'+desc+'</div></div></label>';
+      '<div class="ct">'+title+'</div><div class="cd">'+desc+'</div></label>';
   }
 
   function sideChoice(value, checked, label){
@@ -1365,6 +1378,13 @@ const SEED_CARDS = [
           '<div class="field"><label class="field-label">Part of speech</label><input class="input" id="edit-p"></div>'+
           '<div class="field full"><label class="field-label">Definition</label><textarea class="input" id="edit-d"></textarea></div>'+
           '<div class="field full"><label class="field-label">Example sentence</label><textarea class="input" id="edit-e"></textarea></div>'+
+          '<div class="field full"><label class="field-label">Status</label>'+
+            '<select class="input" id="edit-level">'+
+              '<option value="unknown">Unknown</option>'+
+              '<option value="unsure">Unsure</option>'+
+              '<option value="known">Known</option>'+
+            '</select>'+
+          '</div>'+
           '</div>'+
           '<div class="card-row-actions">'+
             '<button class="btn btn-primary btn-sm" data-save-edit="'+c.id+'">Save changes</button>'+
@@ -1393,6 +1413,8 @@ const SEED_CARDS = [
         document.getElementById("edit-p").value = editCard.p || "";
         document.getElementById("edit-d").value = editCard.d;
         document.getElementById("edit-e").value = editCard.e || "";
+        const levelEl = document.getElementById("edit-level");
+        if(levelEl) levelEl.value = editCard.level || "unknown";
       }
     }
 
@@ -1483,8 +1505,12 @@ const SEED_CARDS = [
         const p = document.getElementById("edit-p").value.trim();
         const d = document.getElementById("edit-d").value.trim();
         const e2 = document.getElementById("edit-e").value.trim();
+        const levelEl = document.getElementById("edit-level");
+        const level = levelEl ? levelEl.value : card.level;
         if(!w || !d){ showToast("Word and definition are required"); return; }
         card.w = w; card.p = p; card.d = d; card.e = e2;
+        card.level = level;
+        if(level === "known" && !card.masteredDate){ card.masteredDate = todayStr(); }
         persist();
         state.lib.editing = null;
         showToast("Card updated: "+w);
