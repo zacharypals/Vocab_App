@@ -970,6 +970,7 @@ const SEED_CARDS = [
     let html = '';
     html += '<div class="lib-toolbar">'+
       '<input class="input" id="lib-search" placeholder="Search words or definitions…" value="'+escapeAttr(state.lib.search)+'">'+
+      '<button class="btn btn-ghost btn-sm" id="lib-search-btn">Search</button>'+
       '<button class="btn btn-brass btn-sm" id="lib-add-toggle">'+(state.lib.showAdd?"Cancel":"+ Add card")+'</button>'+
       '</div>';
 
@@ -1038,9 +1039,15 @@ const SEED_CARDS = [
       }
     }
 
-    document.getElementById("lib-search").addEventListener("input", function(e){
-      state.lib.search = e.target.value; renderLibrary();
+    const searchInput = document.getElementById("lib-search");
+    function runSearch(){
+      state.lib.search = searchInput.value;
+      renderLibrary();
+    }
+    searchInput.addEventListener("keydown", function(e){
+      if(e.key === "Enter"){ e.preventDefault(); runSearch(); }
     });
+    document.getElementById("lib-search-btn").addEventListener("click", runSearch);
     document.getElementById("lib-add-toggle").addEventListener("click", function(){
       state.lib.showAdd = !state.lib.showAdd; renderLibrary();
     });
