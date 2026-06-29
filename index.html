@@ -67,13 +67,13 @@
     color: var(--ink-soft);
   }
   .version-tag{
+    display: block;
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.62rem;
     font-weight: 500;
     color: var(--ink-soft);
-    vertical-align: super;
-    margin-left: 6px;
-    letter-spacing: 0.02em;
+    margin-top: 4px;
+    letter-spacing: 0.04em;
   }
 
   /* ---------- Drawer tab nav ---------- */
@@ -379,7 +379,8 @@
 <body>
 <div class="shell">
   <div class="masthead">
-    <h1 class="display">LexiPal<span class="version-tag" id="version-tag"></span></h1>
+    <h1 class="display">LexiPal</h1>
+    <span class="version-tag" id="version-tag"></span>
     <p class="sub" id="masthead-sub">a working vocabulary, filed by hand</p>
   </div>
 
@@ -743,7 +744,7 @@ const SEED_CARDS = [
        MINOR (1.x.0) — new features, backward-compatible
        MAJOR (x.0.0) — breaking changes to data shape or core flows
   */
-  const APP_VERSION = "1.1.0";
+  const APP_VERSION = "1.1.1";
   const versionEl = document.getElementById("version-tag");
   if(versionEl) versionEl.textContent = "v" + APP_VERSION;
 
