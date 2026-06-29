@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lexicon — Vocabulary Study</title>
+<title>LexiPal — Vocabulary Study</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -316,18 +316,89 @@
     font-size: 0.85rem; box-shadow: var(--shadow); opacity:0; transition: opacity .25s; pointer-events:none; z-index:100;
   }
   .toast.show{ opacity:1; }
+
+  /* ---------- Auth overlays ---------- */
+  .auth-overlay{
+    position: fixed; inset: 0; z-index: 20000; background: rgba(42,36,28,0.45);
+    display:flex; align-items:center; justify-content:center; padding: 20px;
+  }
+  .auth-card{
+    background: var(--card); border: 1px solid var(--rule-strong); border-radius: 10px;
+    box-shadow: var(--shadow); padding: 28px 26px; max-width: 380px; width:100%; text-align:center;
+  }
+  .auth-card-note{ font-size:0.88rem; color: var(--ink-soft); line-height:1.5; margin-bottom:18px; }
+  .auth-card-error{ font-size:0.82rem; color: var(--rust); margin-top:12px; }
+  .spinner{
+    width:34px; height:34px; margin: 0 auto 16px; border-radius:50%;
+    border: 3px solid var(--rule-strong); border-top-color: var(--brass);
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin{ to{ transform: rotate(360deg); } }
+
+  .account-bar{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    font-size:0.78rem; color: var(--ink-soft); padding: 6px 4px 10px;
+  }
+  .account-bar .who{ display:flex; align-items:center; gap:8px; min-width:0; }
+  .account-bar img{ width:22px; height:22px; border-radius:50%; flex-shrink:0; }
+  .account-bar .email{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .account-bar button{
+    background:none; border:none; color: var(--ink-soft); text-decoration:underline;
+    font-size:0.78rem; flex-shrink:0; padding:2px;
+  }
+
+  .save-banner{
+    position: fixed; left:0; right:0; bottom:0; z-index: 19000;
+    background: var(--rust); color:#fff; padding: 10px 16px; font-size:0.85rem;
+    display:flex; align-items:center; justify-content:center; gap:14px; flex-wrap:wrap; text-align:center;
+  }
+  .save-banner button{
+    background: rgba(255,255,255,0.18); border:1px solid rgba(255,255,255,0.5); color:#fff;
+    padding: 5px 12px; border-radius:5px; font-size:0.8rem; font-weight:600;
+  }
+  .save-banner button:disabled{ opacity:0.6; }
 </style>
 </head>
 <body>
 <div class="shell">
   <div class="masthead">
-    <h1 class="display">Lexicon</h1>
+    <h1 class="display">LexiPal</h1>
     <p class="sub" id="masthead-sub">a working vocabulary, filed by hand</p>
   </div>
-  <div class="drawer-tabs" id="tabs"></div>
-  <div class="page" id="page"></div>
+
+  <div id="auth-spinner" class="auth-overlay" style="display:none;">
+    <div class="auth-card">
+      <div class="spinner"></div>
+      <div class="auth-card-note">Signing in…</div>
+    </div>
+  </div>
+
+  <div id="auth-wall" class="auth-overlay" style="display:none;">
+    <div class="auth-card">
+      <h2 class="display" style="margin:0 0 6px;font-size:1.3rem;">Sign in to study</h2>
+      <p class="auth-card-note">LexiPal keeps your cards and progress in a private file in your own Google Drive, so it follows you between devices. Sign in with Google to continue.</p>
+      <button class="btn btn-primary btn-block" id="sign-in-btn">Sign in with Google</button>
+      <div class="auth-card-error" id="auth-wall-error"></div>
+    </div>
+  </div>
+
+  <div id="auth-conflict" class="auth-overlay" style="display:none;">
+    <div class="auth-card">
+      <h2 class="display" style="margin:0 0 6px;font-size:1.3rem;">Which version do you want?</h2>
+      <p class="auth-card-note">This device has progress that looks newer than what's saved in Drive — probably from studying while offline or before signing back in. Pick which version to keep; the other will be overwritten.</p>
+      <button class="btn btn-primary btn-block" id="conflict-keep-local-btn" style="margin-bottom:8px;">Use this device's version</button>
+      <button class="btn btn-ghost btn-block" id="conflict-use-drive-btn">Use Drive's version</button>
+    </div>
+  </div>
+
+  <div id="app-root" style="display:none;">
+    <div class="account-bar" id="account-bar"></div>
+    <div class="drawer-tabs" id="tabs"></div>
+    <div class="page" id="page"></div>
+  </div>
 </div>
 <div class="toast" id="toast"></div>
+<div class="save-banner" id="save-banner" style="display:none;"></div>
 
 <script>
 const SEED_CARDS = [
@@ -649,9 +720,22 @@ const SEED_CARDS = [
 (function(){
   "use strict";
 
-  /* ---------------- storage helpers ---------------- */
-  const STORE_KEY = "vocab-data-v1";
-  let DATA = null; // { cards: [...], studyDays: {dateStr: count} }
+  /* ---------------- config: Google sign-in + Drive sync ---------------- */
+  const GOOGLE_CLIENT_ID = "637244980580-bh6apbuee0upq3mam0pad0mna4gal8oc.apps.googleusercontent.com";
+  const GOOGLE_SCOPES = "https://www.googleapis.com/auth/drive.file";
+  const OAUTH_REDIRECT_URI = "https://zacharypals.github.io/Vocab_App/oauth.html";
+  const POPUP_ORIGIN = "https://zacharypals.github.io";          // origin only, no path
+  const WORKER_URL = "https://lexipal-auth.plannertracker.workers.dev";
+  const DRIVE_FILE_NAME = "lexipal-vocab-data.json";
+
+  const LS_TOKEN = "lexipal_token";
+  const LS_TOKEN_EXP = "lexipal_token_exp";
+  const LS_EMAIL = "lexipal_auth_email";
+  const LS_NAME = "lexipal_auth_name";
+  const LS_PICTURE = "lexipal_auth_picture";
+  const LS_CACHE = "lexipal_local_cache";
+
+  let DATA = null; // { cards: [...], studyDays: {dateStr: count}, savedAt: <ms epoch> }
 
   function todayStr(d){
     d = d || new Date();
@@ -666,33 +750,255 @@ const SEED_CARDS = [
     const cards = SEED_CARDS.map(function(s){
       return { id: uid(), w: s.w, p: s.p, d: s.d, e: s.e, level: "unknown", dateAdded: today, masteredDate: null, fav: false };
     });
-    return { cards: cards, studyDays: {} };
+    return { cards: cards, studyDays: {}, savedAt: 0 };
+  }
+  function normalizeData(d){
+    if(!d.cards) d.cards = [];
+    if(!d.studyDays) d.studyDays = {};
+    if(typeof d.savedAt !== "number") d.savedAt = 0;
+    d.cards.forEach(function(c){ if(typeof c.fav === "undefined") c.fav = false; });
+    return d;
   }
 
-  async function loadData(){
+  /* ---------------- token + local cache storage (per-device) ---------------- */
+  function getToken(){
     try{
-      const res = await window.storage.get(STORE_KEY, false);
-      if(res && res.value){ DATA = JSON.parse(res.value); }
-      else { DATA = freshData(); await persist(); }
-    }catch(e){
-      DATA = freshData();
-      await persist();
+      const t = localStorage.getItem(LS_TOKEN);
+      const exp = parseInt(localStorage.getItem(LS_TOKEN_EXP) || "0", 10);
+      if(t && Date.now() < exp) return t;
+      if(t){ localStorage.removeItem(LS_TOKEN); localStorage.removeItem(LS_TOKEN_EXP); }
+    }catch(e){}
+    return null;
+  }
+  function setToken(token, expiresIn){
+    try{
+      localStorage.setItem(LS_TOKEN, token);
+      localStorage.setItem(LS_TOKEN_EXP, String(Date.now() + ((expiresIn||3600)-300)*1000));
+    }catch(e){}
+  }
+  function clearToken(){
+    try{ localStorage.removeItem(LS_TOKEN); localStorage.removeItem(LS_TOKEN_EXP); }catch(e){}
+  }
+  function getSavedEmail(){ try{ return localStorage.getItem(LS_EMAIL) || ""; }catch(e){ return ""; } }
+  function saveProfile(email, name, picture){
+    try{
+      localStorage.setItem(LS_EMAIL, email || "");
+      if(name) localStorage.setItem(LS_NAME, name);
+      if(picture) localStorage.setItem(LS_PICTURE, picture);
+    }catch(e){}
+  }
+  function getSavedProfile(){
+    try{
+      return { email: localStorage.getItem(LS_EMAIL)||"", name: localStorage.getItem(LS_NAME)||"", picture: localStorage.getItem(LS_PICTURE)||"" };
+    }catch(e){ return { email:"", name:"", picture:"" }; }
+  }
+  function clearProfile(){
+    try{
+      localStorage.removeItem(LS_EMAIL); localStorage.removeItem(LS_NAME); localStorage.removeItem(LS_PICTURE);
+    }catch(e){}
+  }
+  function getLocalCache(){
+    try{ const raw = localStorage.getItem(LS_CACHE); return raw ? JSON.parse(raw) : null; }catch(e){ return null; }
+  }
+  function setLocalCache(data){
+    try{ localStorage.setItem(LS_CACHE, JSON.stringify(data)); }catch(e){}
+  }
+
+  /* ---------------- Google sign-in (popup, gets refresh token via Worker) ---------------- */
+  function requestToken(onSuccess, onError){
+    const params = new URLSearchParams({
+      client_id: GOOGLE_CLIENT_ID,
+      redirect_uri: OAUTH_REDIRECT_URI,
+      response_type: "code",
+      scope: GOOGLE_SCOPES + " profile email",
+      access_type: "offline",
+      prompt: "select_account consent",
+      include_granted_scopes: "true",
+    });
+    const popup = window.open("https://accounts.google.com/o/oauth2/v2/auth?"+params.toString(), "googleAuth", "width=500,height=620,top=100,left=200");
+    if(!popup){ onError("Popup blocked — please allow popups for this site and try again."); return; }
+    let done = false;
+    function onMessage(e){
+      if(e.origin !== POPUP_ORIGIN) return;
+      if(!e.data || (!e.data.code && !e.data.error)) return;
+      if(done) return;
+      done = true;
+      window.removeEventListener("message", onMessage);
+      clearInterval(check);
+      if(e.data.error){ onError(e.data.error); return; }
+      fetch(WORKER_URL+"/exchange", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: e.data.code, redirect_uri: OAUTH_REDIRECT_URI }),
+      }).then(function(r){ return r.json(); }).then(function(data){
+        if(data.error){ onError(data.error); return; }
+        setToken(data.access_token, data.expires_in);
+        onSuccess(data);
+      }).catch(function(err){ onError(err.message); });
     }
-    if(!DATA.cards) DATA.cards = [];
-    if(!DATA.studyDays) DATA.studyDays = {};
-    DATA.cards.forEach(function(c){ if(typeof c.fav === "undefined") c.fav = false; });
+    window.addEventListener("message", onMessage);
+    const check = setInterval(function(){
+      if(popup.closed){
+        clearInterval(check);
+        if(!done){ done = true; window.removeEventListener("message", onMessage); onError("Sign-in window was closed"); }
+      }
+    }, 1000);
   }
 
-  let saving = false, pendingSave = false;
-  async function persist(){
-    if(saving){ pendingSave = true; return; }
-    saving = true;
-    try{
-      await window.storage.set(STORE_KEY, JSON.stringify(DATA), false);
-    }catch(e){ console.error("save failed", e); }
-    saving = false;
-    if(pendingSave){ pendingSave = false; persist(); }
+  function requestTokenSilent(onSuccess, onError){
+    const email = getSavedEmail();
+    if(!email){ onError("no_email"); return; }
+    fetch(WORKER_URL+"/refresh", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: email }),
+    }).then(function(res){
+      return res.json().then(function(data){ return { ok: res.ok, data: data }; });
+    }).then(function(r){
+      if(!r.ok || r.data.error){ onError(r.data.error || "refresh_failed"); return; }
+      setToken(r.data.access_token, r.data.expires_in);
+      onSuccess(r.data);
+    }).catch(function(e){ onError(e.message); });
   }
+
+  function fetchUserInfo(token){
+    return fetch("https://www.googleapis.com/oauth2/v3/userinfo", { headers: { Authorization: "Bearer "+token } })
+      .then(function(res){ if(!res.ok) throw new Error("userinfo failed"); return res.json(); });
+  }
+
+  function handleSignOut(){
+    const email = getSavedEmail();
+    clearToken(); clearProfile();
+    try{ localStorage.removeItem(LS_CACHE); }catch(e){}
+    if(email){
+      fetch(WORKER_URL+"/revoke", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ email: email }) }).catch(function(){});
+    }
+    DATA = null;
+    state.auth.user = null;
+    state.auth.fileId = null;
+    state.auth.conflict = null;
+    state.auth.loading = false;
+    renderRoot();
+  }
+
+  /* ---------------- Drive file helpers (drive.file scope: app-created files only) ---------------- */
+  function driveRequest(url, opts){
+    opts = opts || {};
+    const token = getToken();
+    if(!token) return Promise.reject(new Error("Not authenticated"));
+    const headers = Object.assign({ Authorization: "Bearer "+token }, opts.headers || {});
+    return fetch(url, Object.assign({}, opts, { headers: headers })).then(function(res){
+      if(!res.ok){
+        return res.clone().json().catch(function(){ return {}; }).then(function(j){
+          const detail = (j && j.error && j.error.message) ? j.error.message : "";
+          const err = new Error("Drive error "+res.status+(detail ? ": "+detail : ""));
+          err.status = res.status;
+          throw err;
+        });
+      }
+      return res;
+    });
+  }
+
+  function findOrCreateDriveFile(){
+    const q = "name='"+DRIVE_FILE_NAME+"'+and+trashed=false";
+    return driveRequest("https://www.googleapis.com/drive/v3/files?q="+q+"&spaces=drive&fields=files(id,name)")
+      .then(function(res){ return res.json(); })
+      .then(function(data){
+        if(data.files && data.files.length) return data.files[0].id;
+        const meta = { name: DRIVE_FILE_NAME, mimeType: "application/json" };
+        const form = new FormData();
+        form.append("metadata", new Blob([JSON.stringify(meta)], { type: "application/json" }));
+        form.append("file", new Blob([JSON.stringify({})], { type: "application/json" }));
+        return driveRequest("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id", { method: "POST", body: form })
+          .then(function(r){ return r.json(); }).then(function(j){ return j.id; });
+      });
+  }
+
+  function loadFromDrive(fileId){
+    return driveRequest("https://www.googleapis.com/drive/v3/files/"+fileId+"?alt=media")
+      .then(function(res){ return res.text(); })
+      .then(function(text){ try{ return JSON.parse(text); }catch(e){ return {}; } });
+  }
+
+  function saveToDrive(fileId, allData){
+    return driveRequest("https://www.googleapis.com/upload/drive/v3/files/"+fileId+"?uploadType=media", {
+      method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(allData),
+    });
+  }
+
+  /* ---------------- save system: debounce + retry + safe unload ---------------- */
+  let dirty = false;
+  let saveTimer = null;
+  let saveInFlight = false;
+
+  function persist(){
+    if(!DATA) return;
+    DATA.savedAt = Date.now();
+    setLocalCache(DATA);
+    dirty = true;
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(flushSave, 2000);
+  }
+
+  function flushSave(){
+    if(!dirty || !DATA || !state.auth.fileId) return;
+    if(saveInFlight){ saveTimer = setTimeout(flushSave, 500); return; }
+    saveInFlight = true;
+    saveToDrive(state.auth.fileId, DATA).then(function(){
+      dirty = false; saveInFlight = false; clearSaveError();
+    }).catch(function(err){
+      saveInFlight = false;
+      if(err.status === 401){
+        requestTokenSilent(function(){
+          saveInFlight = true;
+          saveToDrive(state.auth.fileId, DATA).then(function(){
+            dirty = false; saveInFlight = false; clearSaveError();
+          }).catch(function(){ saveInFlight = false; showSaveError("signin"); });
+        }, function(){ showSaveError("signin"); });
+      } else {
+        showSaveError("retry", err.message);
+      }
+    });
+  }
+
+  function showSaveError(mode, detail){
+    const el = document.getElementById("save-banner");
+    if(mode === "signin"){
+      el.innerHTML = "Couldn't save your progress — please sign in again. <button id=\"banner-signin-btn\">Sign in again</button>";
+    } else {
+      el.innerHTML = "Couldn't save your progress to Drive"+(detail ? " ("+escapeHtml(detail)+")" : "")+". <button id=\"banner-retry-btn\">Retry</button>";
+    }
+    el.style.display = "flex";
+    const sb = document.getElementById("banner-signin-btn");
+    if(sb) sb.addEventListener("click", function(){ el.style.display = "none"; handleSignOut(); });
+    const rb = document.getElementById("banner-retry-btn");
+    if(rb) rb.addEventListener("click", function(){
+      rb.disabled = true; rb.textContent = "Retrying…";
+      dirty = true;
+      flushSave();
+    });
+  }
+  function clearSaveError(){
+    const el = document.getElementById("save-banner");
+    el.style.display = "none";
+    el.innerHTML = "";
+  }
+
+  document.addEventListener("visibilitychange", function(){
+    if(document.hidden && dirty){ clearTimeout(saveTimer); flushSave(); }
+  });
+  window.addEventListener("beforeunload", function(){
+    if(dirty && DATA && state.auth && state.auth.fileId){
+      const token = getToken();
+      if(token){
+        try{
+          fetch("https://www.googleapis.com/upload/drive/v3/files/"+state.auth.fileId+"?uploadType=media", {
+            method: "PATCH", headers: { "Content-Type": "application/json", Authorization: "Bearer "+token },
+            body: JSON.stringify(DATA), keepalive: true,
+          });
+        }catch(e){}
+      }
+    }
+  });
 
   function showToast(msg){
     const t = document.getElementById("toast");
@@ -707,7 +1013,8 @@ const SEED_CARDS = [
     page: "study",          // study | library | metrics
     session: null,          // { queue:[ids], idx, flipped, results:{known,unsure,unknown} }
     setup: { scope: "all", countMode: "all", count: 20, startSide: "word" },
-    lib: { search: "", showAdd: false, expanded: null, editing: null, refocusSearchPos: null }
+    lib: { search: "", showAdd: false, expanded: null, editing: null, refocusSearchPos: null },
+    auth: { loading: true, user: null, fileId: null, conflict: null }
   };
 
   function cardsByScope(scope){
@@ -1297,8 +1604,149 @@ const SEED_CARDS = [
     else if(state.page === "metrics") renderMetrics();
   }
 
+  /* ---------------- auth-gated root render ---------------- */
+  function renderRoot(){
+    document.getElementById("auth-spinner").style.display = state.auth.loading ? "flex" : "none";
+    document.getElementById("auth-wall").style.display = (!state.auth.loading && !state.auth.user && !state.auth.conflict) ? "flex" : "none";
+    document.getElementById("auth-conflict").style.display = (!state.auth.loading && state.auth.conflict) ? "flex" : "none";
+    document.getElementById("app-root").style.display = (!state.auth.loading && state.auth.user && !state.auth.conflict) ? "block" : "none";
+    if(!state.auth.loading && state.auth.user && !state.auth.conflict){
+      renderAccountBar();
+      render();
+    }
+  }
+
+  function renderAccountBar(){
+    const u = state.auth.user || {};
+    const bar = document.getElementById("account-bar");
+    bar.innerHTML = '<div class="who">'+
+      (u.picture ? '<img src="'+escapeAttr(u.picture)+'" alt="">' : '')+
+      '<span class="email">'+escapeHtml(u.email||"")+'</span></div>'+
+      '<button id="sign-out-btn">Sign out</button>';
+    document.getElementById("sign-out-btn").addEventListener("click", handleSignOut);
+  }
+
+  function showWallError(msg){
+    const errEl = document.getElementById("auth-wall-error");
+    if(errEl) errEl.textContent = msg || "";
+  }
+
+  // Reconciles this device's local cache against what's in Drive after a fresh sign-in.
+  // Returns a promise resolving to either { ready:true } (DATA is set, safe to render)
+  // or { needsConflictChoice:true, local, remote } (ask the user before touching either copy).
+  function afterSignedIn(profile){
+    state.auth.user = profile;
+    saveProfile(profile.email, profile.name, profile.picture);
+    return findOrCreateDriveFile().then(function(fileId){
+      state.auth.fileId = fileId;
+      return loadFromDrive(fileId);
+    }).then(function(driveDataRaw){
+      const driveData = normalizeData(driveDataRaw && Object.keys(driveDataRaw).length ? driveDataRaw : { cards: [], studyDays: {}, savedAt: 0 });
+      const localCache = getLocalCache();
+      const driveHasCards = driveData.cards.length > 0;
+      const localHasCards = localCache && localCache.cards && localCache.cards.length > 0;
+
+      if(driveHasCards && localHasCards && localCache.savedAt > driveData.savedAt){
+        return { needsConflictChoice: true, local: normalizeData(localCache), remote: driveData };
+      }
+      if(!driveHasCards && localHasCards){
+        DATA = normalizeData(localCache);
+        DATA.savedAt = Date.now();
+        return saveToDrive(state.auth.fileId, DATA).then(function(){ setLocalCache(DATA); return { ready: true }; });
+      }
+      if(driveHasCards){
+        DATA = driveData;
+        setLocalCache(DATA);
+        return { ready: true };
+      }
+      // genuinely first run anywhere for this account
+      DATA = freshData();
+      DATA.savedAt = Date.now();
+      return saveToDrive(state.auth.fileId, DATA).then(function(){ setLocalCache(DATA); return { ready: true }; });
+    });
+  }
+
+  function finishBoot(result){
+    state.auth.loading = false;
+    if(result && result.needsConflictChoice){ state.auth.conflict = result; }
+    renderRoot();
+  }
+  function failBoot(err){
+    state.auth.loading = false;
+    showWallError("Signed in, but couldn't load your data: "+(err && err.message ? err.message : err));
+    renderRoot();
+  }
+
+  function handleSignInClick(){
+    showWallError("");
+    requestToken(function(data){
+      state.auth.loading = true; renderRoot();
+      afterSignedIn({ email: data.email, name: data.name, picture: data.picture }).then(finishBoot, failBoot);
+    }, function(err){
+      state.auth.loading = false;
+      showWallError(typeof err === "string" ? err : "Sign-in failed. Please try again.");
+      renderRoot();
+    });
+  }
+
+  function resolveConflictKeepLocal(){
+    const c = state.auth.conflict;
+    DATA = c.local;
+    DATA.savedAt = Date.now();
+    state.auth.conflict = null;
+    saveToDrive(state.auth.fileId, DATA).then(function(){
+      setLocalCache(DATA);
+      renderRoot();
+    }).catch(function(){
+      setLocalCache(DATA);
+      renderRoot();
+      dirty = true;
+      flushSave();
+    });
+  }
+  function resolveConflictUseDrive(){
+    const c = state.auth.conflict;
+    DATA = normalizeData(c.remote);
+    state.auth.conflict = null;
+    setLocalCache(DATA);
+    renderRoot();
+  }
+
   /* ---------------- init ---------------- */
-  loadData().then(render);
+  document.getElementById("sign-in-btn").addEventListener("click", handleSignInClick);
+  document.getElementById("conflict-keep-local-btn").addEventListener("click", resolveConflictKeepLocal);
+  document.getElementById("conflict-use-drive-btn").addEventListener("click", resolveConflictUseDrive);
+
+  function boot(){
+    state.auth.loading = true;
+    renderRoot();
+    const cachedToken = getToken();
+    if(cachedToken){
+      fetchUserInfo(cachedToken).then(function(info){
+        return afterSignedIn({ email: info.email, name: info.name, picture: info.picture });
+      }).then(finishBoot, function(){
+        clearToken();
+        trySilentOrWall();
+      });
+      return;
+    }
+    trySilentOrWall();
+  }
+
+  function trySilentOrWall(){
+    const savedEmail = getSavedEmail();
+    if(!savedEmail){ state.auth.loading = false; renderRoot(); return; }
+    requestTokenSilent(function(data){
+      const cached = getSavedProfile();
+      afterSignedIn({ email: data.email || savedEmail, name: data.name || cached.name, picture: data.picture || cached.picture })
+        .then(finishBoot, failBoot);
+    }, function(){
+      state.auth.loading = false;
+      renderRoot();
+    });
+  }
+
+  boot();
 })();
 </script>
 </body>
