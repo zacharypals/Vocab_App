@@ -707,7 +707,7 @@ const SEED_CARDS = [
     page: "study",          // study | library | metrics
     session: null,          // { queue:[ids], idx, flipped, results:{known,unsure,unknown} }
     setup: { scope: "all", countMode: "all", count: 20, startSide: "word" },
-    lib: { search: "", showAdd: false, expanded: null }
+    lib: { search: "", showAdd: false, expanded: null, editing: null }
   };
 
   function cardsByScope(scope){
@@ -993,20 +993,50 @@ const SEED_CARDS = [
     cards.forEach(function(c){
       const pillClass = c.level==="known"?"pill-known":(c.level==="unsure"?"pill-unsure":"pill-unknown");
       const expanded = state.lib.expanded === c.id;
-      html += '<div class="card-row'+(expanded?" expanded":"")+'" data-id="'+c.id+'">'+
+      const editing = state.lib.editing === c.id;
+      html += '<div class="card-row'+(expanded||editing?" expanded":"")+'" data-id="'+c.id+'">'+
         '<div class="card-row-top">'+
           '<button class="row-star'+(c.fav?" active":"")+'" data-fav="'+c.id+'" title="'+(c.fav?"Remove from favorites":"Add to favorites")+'">'+(c.fav?"\u2605":"\u2606")+'</button>'+
           '<div style="flex:1;min-width:0;"><span class="card-row-word">'+escapeHtml(c.w)+'</span><span class="card-row-pos">'+escapeHtml(c.p||"")+'</span></div>'+
           '<span class="level-pill '+pillClass+'">'+c.level+'</span>'+
-        '</div>'+
-        '<div class="card-row-detail">'+escapeHtml(c.d)+(c.e?'<div class="ex">'+escapeHtml(c.e)+'</div>':'')+
-          '<div class="card-row-actions"><button class="btn btn-ghost btn-sm" data-del="'+c.id+'">Delete card</button></div>'+
-        '</div>'+
-      '</div>';
+        '</div>';
+      if(editing){
+        html += '<div class="card-row-detail edit-form">'+
+          '<div class="add-form-grid">'+
+          '<div class="field"><label class="field-label">Word</label><input class="input" id="edit-w"></div>'+
+          '<div class="field"><label class="field-label">Part of speech</label><input class="input" id="edit-p"></div>'+
+          '<div class="field full"><label class="field-label">Definition</label><textarea class="input" id="edit-d"></textarea></div>'+
+          '<div class="field full"><label class="field-label">Example sentence</label><textarea class="input" id="edit-e"></textarea></div>'+
+          '</div>'+
+          '<div class="card-row-actions">'+
+            '<button class="btn btn-primary btn-sm" data-save-edit="'+c.id+'">Save changes</button>'+
+            '<button class="btn btn-ghost btn-sm" data-cancel-edit="'+c.id+'">Cancel</button>'+
+          '</div>'+
+        '</div>';
+      } else {
+        html += '<div class="card-row-detail">'+escapeHtml(c.d)+(c.e?'<div class="ex">'+escapeHtml(c.e)+'</div>':'')+
+          '<div class="card-row-actions">'+
+            '<button class="btn btn-ghost btn-sm" data-edit="'+c.id+'">Edit card</button>'+
+            '<button class="btn btn-ghost btn-sm" data-del="'+c.id+'">Delete card</button>'+
+          '</div>'+
+        '</div>';
+      }
+      html += '</div>';
     });
     html += '</div>';
 
     document.getElementById("page").innerHTML = html;
+
+    if(state.lib.editing){
+      const editCard = DATA.cards.find(function(c){ return c.id === state.lib.editing; });
+      const ewEl = document.getElementById("edit-w");
+      if(editCard && ewEl){
+        ewEl.value = editCard.w;
+        document.getElementById("edit-p").value = editCard.p || "";
+        document.getElementById("edit-d").value = editCard.d;
+        document.getElementById("edit-e").value = editCard.e || "";
+      }
+    }
 
     document.getElementById("lib-search").addEventListener("input", function(e){
       state.lib.search = e.target.value; renderLibrary();
@@ -1029,8 +1059,9 @@ const SEED_CARDS = [
     });
     Array.prototype.forEach.call(document.querySelectorAll(".card-row"), function(row){
       row.addEventListener("click", function(e){
-        if(e.target.closest("[data-del]") || e.target.closest("[data-fav]")) return;
         const id = row.getAttribute("data-id");
+        if(state.lib.editing === id) return; // ignore clicks inside an open edit form
+        if(e.target.closest("[data-del]") || e.target.closest("[data-fav]") || e.target.closest("[data-edit]")) return;
         state.lib.expanded = state.lib.expanded === id ? null : id;
         renderLibrary();
       });
@@ -1052,6 +1083,40 @@ const SEED_CARDS = [
         DATA.cards = DATA.cards.filter(function(c){ return c.id !== id; });
         persist();
         showToast("Deleted: "+(card?card.w:""));
+        renderLibrary();
+      });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-edit]"), function(btn){
+      btn.addEventListener("click", function(e){
+        e.stopPropagation();
+        const id = btn.getAttribute("data-edit");
+        state.lib.expanded = id;
+        state.lib.editing = id;
+        renderLibrary();
+      });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-cancel-edit]"), function(btn){
+      btn.addEventListener("click", function(e){
+        e.stopPropagation();
+        state.lib.editing = null;
+        renderLibrary();
+      });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-save-edit]"), function(btn){
+      btn.addEventListener("click", function(e){
+        e.stopPropagation();
+        const id = btn.getAttribute("data-save-edit");
+        const card = DATA.cards.find(function(c){return c.id===id;});
+        if(!card) return;
+        const w = document.getElementById("edit-w").value.trim();
+        const p = document.getElementById("edit-p").value.trim();
+        const d = document.getElementById("edit-d").value.trim();
+        const e2 = document.getElementById("edit-e").value.trim();
+        if(!w || !d){ showToast("Word and definition are required"); return; }
+        card.w = w; card.p = p; card.d = d; card.e = e2;
+        persist();
+        state.lib.editing = null;
+        showToast("Card updated: "+w);
         renderLibrary();
       });
     });
