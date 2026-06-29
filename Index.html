@@ -153,6 +153,15 @@
   .choice-card .cd{ font-size:0.82rem; color: var(--ink-soft); margin-top:2px; }
   .choice-card.disabled{ opacity:0.45; }
 
+  .side-row{ display:flex; gap:8px; margin-bottom: 22px; }
+  .side-choice{
+    flex:1; text-align:center; border: 1px solid var(--rule-strong); border-radius: 8px;
+    padding: 11px 6px; background: #fffdf7; font-size:0.86rem; font-weight:600; cursor:pointer;
+    transition: border-color .15s, background .15s; position: relative; display:block;
+  }
+  .side-choice input{ position:absolute; opacity:0; pointer-events:none; }
+  .side-choice.selected{ border-color: var(--brass); background: #fbf2dc; }
+
   .count-row{ display:flex; gap:10px; align-items:center; margin-bottom: 22px; flex-wrap: wrap; }
   .count-row .input{ max-width: 110px; }
   .toggle-all{
@@ -169,12 +178,12 @@
   .hr{ border:none; border-top:1px dashed var(--rule); margin: 22px 0; }
 
   /* ---------- Flashcard ---------- */
-  .session-head{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom: 18px; }
+  .session-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom: 18px; }
   .session-head .mono{ font-size: 0.78rem; color: var(--ink-soft); }
   .progress-bar{ height:4px; background: var(--rule); border-radius:2px; overflow:hidden; margin-bottom: 26px; }
   .progress-fill{ height:100%; background: var(--brass); transition: width .25s ease; }
 
-  .flip-stage{ perspective: 1400px; margin: 0 auto 24px; max-width: 420px; }
+  .flip-stage{ perspective: 1400px; margin: 0 auto 24px; max-width: 420px; position: relative; }
   .flip-card{ position:relative; width:100%; height: 280px; cursor:pointer; }
   .flip-inner{
     position:absolute; inset:0; transition: transform .5s cubic-bezier(.2,.8,.2,1);
@@ -202,9 +211,14 @@
   .face-back .flip-inner-rotate{ transform: rotateY(180deg); }
   .face-back{ transform: rotateY(180deg); }
   .face-tab{
-    position:absolute; top:14px; right:18px; font-family:'JetBrains Mono',monospace;
+    position:absolute; top:14px; right:46px; font-family:'JetBrains Mono',monospace;
     font-size:0.68rem; letter-spacing:0.08em; color: var(--ink-soft); text-transform:lowercase;
   }
+  .fav-star{
+    position:absolute; top:6px; right:8px; width:32px; height:32px; border:none; background:transparent;
+    color: var(--rule-strong); font-size:1.15rem; display:flex; align-items:center; justify-content:center; z-index:2;
+  }
+  .fav-star.active{ color: var(--brass); }
   .face-word{
     font-family:'Fraunces',Georgia,serif; font-weight:600; font-size: clamp(1.5rem,7vw,2.1rem);
     margin-top: 56px; line-height:1.15; color: var(--ink); text-align:center;
@@ -254,6 +268,11 @@
   }
   .card-row:last-child{ border-bottom:none; }
   .card-row-top{ display:flex; justify-content:space-between; align-items:center; gap:10px; }
+  .row-star{
+    flex-shrink:0; border:none; background:transparent; color: var(--rule-strong);
+    font-size:1.1rem; width:24px; height:24px; display:flex; align-items:center; justify-content:center; padding:0;
+  }
+  .row-star.active{ color: var(--brass); }
   .card-row-word{ font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:1.05rem; }
   .card-row-pos{ font-size:0.74rem; color: var(--ink-soft); margin-left:8px; font-style:italic; }
   .level-pill{
@@ -645,7 +664,7 @@ const SEED_CARDS = [
   function freshData(){
     const today = todayStr();
     const cards = SEED_CARDS.map(function(s){
-      return { id: uid(), w: s.w, p: s.p, d: s.d, e: s.e, level: "unknown", dateAdded: today, masteredDate: null };
+      return { id: uid(), w: s.w, p: s.p, d: s.d, e: s.e, level: "unknown", dateAdded: today, masteredDate: null, fav: false };
     });
     return { cards: cards, studyDays: {} };
   }
@@ -661,6 +680,7 @@ const SEED_CARDS = [
     }
     if(!DATA.cards) DATA.cards = [];
     if(!DATA.studyDays) DATA.studyDays = {};
+    DATA.cards.forEach(function(c){ if(typeof c.fav === "undefined") c.fav = false; });
   }
 
   let saving = false, pendingSave = false;
@@ -686,12 +706,13 @@ const SEED_CARDS = [
   const state = {
     page: "study",          // study | library | metrics
     session: null,          // { queue:[ids], idx, flipped, results:{known,unsure,unknown} }
-    setup: { scope: "all", countMode: "all", count: 20 },
+    setup: { scope: "all", countMode: "all", count: 20, startSide: "word" },
     lib: { search: "", showAdd: false, expanded: null }
   };
 
   function cardsByScope(scope){
     if(scope === "review") return DATA.cards.filter(function(c){ return c.level !== "known"; });
+    if(scope === "favorites") return DATA.cards.filter(function(c){ return c.fav; });
     return DATA.cards.slice();
   }
   function shuffle(arr){
@@ -721,6 +742,7 @@ const SEED_CARDS = [
   function renderSetup(){
     const all = DATA.cards;
     const reviewPool = cardsByScope("review");
+    const favPool = cardsByScope("favorites");
     const scope = state.setup.scope;
     const pool = cardsByScope(scope);
     const maxCount = pool.length;
@@ -731,6 +753,14 @@ const SEED_CARDS = [
     html += '<div class="choice-group">';
     html += choiceCard("scope","all", scope==="all", "All words", all.length+" cards in the lexicon");
     html += choiceCard("scope","review", scope==="review", "Unsure &amp; unknown only", reviewPool.length+" cards still need work", reviewPool.length===0);
+    html += choiceCard("scope","favorites", scope==="favorites", "Favorites \u2605", favPool.length+" starred card"+(favPool.length===1?"":"s"), favPool.length===0);
+    html += '</div>';
+
+    html += '<h2 class="display" style="font-size:1.4rem;">Which side comes up first?</h2>';
+    html += '<div class="side-row">';
+    html += sideChoice("word", state.setup.startSide==="word", "Word");
+    html += sideChoice("definition", state.setup.startSide==="definition", "Definition");
+    html += sideChoice("random", state.setup.startSide==="random", "Random");
     html += '</div>';
 
     html += '<h2 class="display" style="font-size:1.4rem;">How many cards?</h2>';
@@ -740,7 +770,7 @@ const SEED_CARDS = [
     html += '</div>';
 
     if(pool.length === 0){
-      html += '<div class="empty-note">Nothing to review here yet — every card in this set is already marked Known. Try studying "All words," or come back after marking a few Unsure.</div>';
+      html += '<div class="empty-note">Nothing to study in this set yet. Try "All words," mark a few cards Unsure, or star some Favorites.</div>';
     } else {
       const goCount = state.setup.countMode==="all" ? maxCount : Math.min(state.setup.count, maxCount);
       html += '<button class="btn btn-primary btn-block" id="begin-btn">Begin study session — '+goCount+' card'+(goCount===1?'':'s')+'</button>';
@@ -750,6 +780,9 @@ const SEED_CARDS = [
 
     Array.prototype.forEach.call(document.querySelectorAll('input[name="scope"]'), function(r){
       r.addEventListener("change", function(){ state.setup.scope = r.value; renderSetup(); });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('input[name="startSide"]'), function(r){
+      r.addEventListener("change", function(){ state.setup.startSide = r.value; renderSetup(); });
     });
     const ci = document.getElementById("count-input");
     if(ci) ci.addEventListener("input", function(){ state.setup.count = Math.max(1, parseInt(ci.value||"1",10)); });
@@ -768,13 +801,26 @@ const SEED_CARDS = [
       '<div><div class="ct">'+title+'</div><div class="cd">'+desc+'</div></div></label>';
   }
 
+  function sideChoice(value, checked, label){
+    return '<label class="side-choice'+(checked?" selected":"")+'">'+
+      '<input type="radio" name="startSide" value="'+value+'" '+(checked?"checked":"")+'>'+
+      '<span>'+label+'</span></label>';
+  }
+
   function startSession(){
     const scope = state.setup.scope;
     let pool = shuffle(cardsByScope(scope));
     const n = state.setup.countMode === "all" ? pool.length : Math.min(state.setup.count, pool.length);
     pool = pool.slice(0, n);
+    const mode = state.setup.startSide;
+    const sides = pool.map(function(){
+      if(mode === "definition") return "back";
+      if(mode === "random") return Math.random() < 0.5 ? "front" : "back";
+      return "front";
+    });
     state.session = {
       queue: pool.map(function(c){return c.id;}),
+      sides: sides,
       idx: 0,
       flipped: false,
       results: { known:0, unsure:0, unknown:0 },
@@ -795,24 +841,25 @@ const SEED_CARDS = [
     if(s.idx >= s.total){ return renderSummary(); }
     const card = currentSessionCard();
     const pct = Math.round((s.idx / s.total) * 100);
+    const defFirst = s.sides[s.idx] === "back";
 
     let html = '';
     html += '<div class="session-head"><span class="mono">card '+(s.idx+1)+' / '+s.total+'</span>'+
-            '<span class="mono">'+streakTodayLabel()+'</span></div>';
+            '<button class="btn btn-ghost btn-sm" id="stop-session-btn">End session</button></div>';
     html += '<div class="progress-bar"><div class="progress-fill" style="width:'+pct+'%"></div></div>';
+    html += '<div class="mono" style="text-align:center;font-size:0.72rem;color:var(--ink-soft);margin:-16px 0 18px;">'+streakTodayLabel()+'</div>';
 
-    html += '<div class="flip-stage"><div class="flip-card'+(s.flipped?" flipped":"")+'" id="flip-card">'+
+    const wordFace = faceWordHtml(card, defFirst ? "tap to reveal word" : "tap to reveal definition");
+    const defFace = faceDefHtml(card, "tap to flip back");
+    const frontHtml = defFirst ? defFace : wordFace;
+    const backHtml = defFirst ? wordFace : defFace;
+
+    html += '<div class="flip-stage">'+
+      '<button class="fav-star'+(card.fav?" active":"")+'" id="fav-star-btn" title="'+(card.fav?"Remove from favorites":"Add to favorites")+'">'+(card.fav?"\u2605":"\u2606")+'</button>'+
+      '<div class="flip-card'+(s.flipped?" flipped":"")+'" id="flip-card">'+
       '<div class="flip-inner">'+
-        '<div class="face face-front">'+
-          '<span class="face-tab">'+escapeHtml(card.p||"")+'</span>'+
-          '<div class="face-word">'+escapeHtml(card.w)+'</div>'+
-          '<div class="face-hint">tap to reveal</div>'+
-        '</div>'+
-        '<div class="face face-back">'+
-          '<span class="face-tab">'+escapeHtml(card.p||"")+'</span>'+
-          '<div class="face-def">'+escapeHtml(card.d)+'</div>'+
-          (card.e ? '<div class="face-ex">'+escapeHtml(card.e)+'</div>' : '')+
-        '</div>'+
+        '<div class="face face-front">'+frontHtml+'</div>'+
+        '<div class="face face-back">'+backHtml+'</div>'+
       '</div></div></div>';
 
     const disabled = s.flipped ? "" : "disabled";
@@ -835,6 +882,27 @@ const SEED_CARDS = [
         rateCurrent(btn.getAttribute("data-level"));
       });
     });
+    document.getElementById("fav-star-btn").addEventListener("click", function(){
+      card.fav = !card.fav;
+      persist();
+      renderSession();
+    });
+    document.getElementById("stop-session-btn").addEventListener("click", function(){
+      state.session = null;
+      render();
+    });
+  }
+
+  function faceWordHtml(card, hint){
+    return '<span class="face-tab">'+escapeHtml(card.p||"")+'</span>'+
+      '<div class="face-word">'+escapeHtml(card.w)+'</div>'+
+      '<div class="face-hint">'+hint+'</div>';
+  }
+  function faceDefHtml(card, hint){
+    return '<span class="face-tab">'+escapeHtml(card.p||"")+'</span>'+
+      '<div class="face-def">'+escapeHtml(card.d)+'</div>'+
+      (card.e ? '<div class="face-ex">'+escapeHtml(card.e)+'</div>' : '')+
+      '<div class="face-hint">'+hint+'</div>';
   }
 
   function streakTodayLabel(){
@@ -927,7 +995,8 @@ const SEED_CARDS = [
       const expanded = state.lib.expanded === c.id;
       html += '<div class="card-row'+(expanded?" expanded":"")+'" data-id="'+c.id+'">'+
         '<div class="card-row-top">'+
-          '<div><span class="card-row-word">'+escapeHtml(c.w)+'</span><span class="card-row-pos">'+escapeHtml(c.p||"")+'</span></div>'+
+          '<button class="row-star'+(c.fav?" active":"")+'" data-fav="'+c.id+'" title="'+(c.fav?"Remove from favorites":"Add to favorites")+'">'+(c.fav?"\u2605":"\u2606")+'</button>'+
+          '<div style="flex:1;min-width:0;"><span class="card-row-word">'+escapeHtml(c.w)+'</span><span class="card-row-pos">'+escapeHtml(c.p||"")+'</span></div>'+
           '<span class="level-pill '+pillClass+'">'+c.level+'</span>'+
         '</div>'+
         '<div class="card-row-detail">'+escapeHtml(c.d)+(c.e?'<div class="ex">'+escapeHtml(c.e)+'</div>':'')+
@@ -952,7 +1021,7 @@ const SEED_CARDS = [
       const d = document.getElementById("new-d").value.trim();
       const e = document.getElementById("new-e").value.trim();
       if(!w || !d){ showToast("Word and definition are required"); return; }
-      DATA.cards.push({ id: uid(), w:w, p:p, d:d, e:e, level:"unknown", dateAdded: todayStr(), masteredDate: null });
+      DATA.cards.push({ id: uid(), w:w, p:p, d:d, e:e, level:"unknown", dateAdded: todayStr(), masteredDate: null, fav: false });
       persist();
       state.lib.showAdd = false;
       showToast("Card added: "+w);
@@ -960,9 +1029,18 @@ const SEED_CARDS = [
     });
     Array.prototype.forEach.call(document.querySelectorAll(".card-row"), function(row){
       row.addEventListener("click", function(e){
-        if(e.target.closest("[data-del]")) return;
+        if(e.target.closest("[data-del]") || e.target.closest("[data-fav]")) return;
         const id = row.getAttribute("data-id");
         state.lib.expanded = state.lib.expanded === id ? null : id;
+        renderLibrary();
+      });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-fav]"), function(btn){
+      btn.addEventListener("click", function(e){
+        e.stopPropagation();
+        const id = btn.getAttribute("data-fav");
+        const card = DATA.cards.find(function(c){return c.id===id;});
+        if(card){ card.fav = !card.fav; persist(); }
         renderLibrary();
       });
     });
